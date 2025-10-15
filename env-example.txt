@@ -1,0 +1,12 @@
+# Arquivo de configuração de ambiente
+# Renomeie este arquivo para .env e preencha com seus dados do Supabase
+
+VITE_SUPABASE_URL=https://your-project.supabase.co
+VITE_SUPABASE_ANON_KEY=your-anon-key-here
+
+# Para obter esses valores:
+# 1. Acesse https://supabase.com
+# 2. Vá para seu projeto
+# 3. Em Settings > API, copie:
+#    - Project URL (para VITE_SUPABASE_URL)
+#    - anon public key (para VITE_SUPABASE_ANON_KEY)
