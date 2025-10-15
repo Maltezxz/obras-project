@@ -73,6 +73,16 @@ export interface Movimentacao {
   created_at: string;
 }
 
+export interface ObraImage {
+  id: string;
+  obra_id: string;
+  image_url: string;
+  description: string;
+  display_order: number;
+  uploaded_by: string;
+  created_at: string;
+}
+
 export interface AuthContextType {
   user: User | null;
   session: unknown;
