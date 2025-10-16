@@ -133,14 +133,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signIn = async (cnpj: string, username: string, password: string) => {
     try {
+      console.log('🔍 Tentando login com:', { cnpj, username, password });
+      console.log('🔍 Credenciais esperadas:', HOST_FAKE);
+
       // 1) Bypass visual: permitir login local sem Supabase
-      const isBypass = (
-        cnpj === HOST_FAKE.cnpj &&
-        username.trim().toLowerCase() === HOST_FAKE.username.toLowerCase() &&
-        password === HOST_FAKE.password
-      );
+      const cnpjMatch = cnpj.trim() === HOST_FAKE.cnpj;
+      const usernameMatch = username.trim().toLowerCase() === HOST_FAKE.username.toLowerCase();
+      const passwordMatch = password === HOST_FAKE.password;
+
+      console.log('🔍 Verificação:', { cnpjMatch, usernameMatch, passwordMatch });
+
+      const isBypass = cnpjMatch && usernameMatch && passwordMatch;
 
       if (isBypass) {
+        console.log('✅ Login bypass bem-sucedido!');
         const fakeUser: User = {
           id: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
           name: 'Fernando Antunes',
