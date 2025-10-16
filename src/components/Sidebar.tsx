@@ -111,7 +111,7 @@ export default function Sidebar({ currentPage, setCurrentPage, isOpen, setIsOpen
                     {user?.name || 'Usuário'}
                     {user?.role && (
                       <span className="ml-2 px-2 py-0.5 bg-blue-500/20 text-blue-400 rounded text-xs">
-                        {user.role === 'host' ? 'Host' : 'Funcionário'}
+                        {user.role === 'host' ? 'Host' : `Usuário ${user.user_id || ''}`}
                       </span>
                     )}
                   </p>
