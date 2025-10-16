@@ -49,7 +49,13 @@ export default function HomePage() {
       }
 
       setFerramentas(ferramRes.data || []);
-      console.log('✅ Ferramentas carregadas do Supabase na Home');
+      console.log('✅ Ferramentas carregadas do Supabase na Home:', {
+        total: ferramRes.data?.length || 0,
+        disponiveis: ferramRes.data?.filter(f => f.status === 'disponivel').length || 0,
+        em_uso: ferramRes.data?.filter(f => f.status === 'em_uso').length || 0,
+        desaparecidas: ferramRes.data?.filter(f => f.status === 'desaparecida').length || 0,
+        status_list: ferramRes.data?.map(f => ({ name: f.name, status: f.status })) || []
+      });
     } catch (error) {
       console.error('Error loading data:', error);
     } finally {
@@ -71,12 +77,12 @@ export default function HomePage() {
       borderColor: 'border-blue-500/20',
     },
     {
-      label: 'Disponíveis',
-      value: ferramentas.filter(f => f.status === 'disponivel').length,
+      label: 'Equipamentos',
+      value: ferramentas.filter(f => f.status !== 'desaparecida').length,
       icon: Wrench,
-      color: 'from-purple-500 to-purple-600',
-      bgColor: 'bg-purple-500/10',
-      borderColor: 'border-purple-500/20',
+      color: 'from-green-500 to-green-600',
+      bgColor: 'bg-green-500/10',
+      borderColor: 'border-green-500/20',
     },
     {
       label: 'Desaparecidos',
