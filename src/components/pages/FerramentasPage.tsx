@@ -22,6 +22,7 @@ export default function FerramentasPage() {
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
+    tipo: '',
     modelo: '',
     serial: '',
     current_type: 'obra',
@@ -138,6 +139,7 @@ export default function FerramentasPage() {
 
       const ferramentaData = {
         name: formData.name.trim(),
+        tipo: formData.tipo.trim() || undefined,
         modelo: formData.modelo.trim(),
         serial: formData.serial.trim(),
         current_type: formData.current_id ? 'obra' : undefined,
@@ -204,6 +206,7 @@ export default function FerramentasPage() {
       setShowModal(false);
       setFormData({
         name: '',
+        tipo: '',
         modelo: '',
         serial: '',
         current_type: 'obra',
@@ -511,6 +514,20 @@ export default function FerramentasPage() {
 
               {/* Form Content */}
               <form onSubmit={handleSubmit} className="p-6 space-y-4 max-h-96 overflow-y-auto">
+                {/* Tipo */}
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-gray-200">
+                    Tipo
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.tipo}
+                    onChange={(e) => setFormData({ ...formData, tipo: e.target.value })}
+                    placeholder="Tipo do equipamento"
+                    className="w-full px-3 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 transition-all duration-200"
+                  />
+                </div>
+
                 {/* Item */}
                 <div className="space-y-2">
                   <label className="block text-sm font-medium text-gray-200">

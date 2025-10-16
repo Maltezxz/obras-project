@@ -36,6 +36,7 @@ export interface Estabelecimento {
 export interface Ferramenta {
   id: string;
   name: string;
+  tipo?: string;
   modelo: string;
   serial: string;
   status: 'disponivel' | 'em_uso' | 'desaparecida';
