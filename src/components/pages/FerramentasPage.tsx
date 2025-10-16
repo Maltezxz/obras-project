@@ -707,7 +707,7 @@ export default function FerramentasPage() {
                     value={formData.valor}
                     onChange={(e) => {
                       const value = e.target.value;
-                      if (value === '' || /^\d*[.,]?\d{0,2}$/.test(value)) {
+                      if (value === '' || /^[\d.,]*$/.test(value)) {
                         setFormData({ ...formData, valor: value });
                       }
                     }}
