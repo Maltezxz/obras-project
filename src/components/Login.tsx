@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useAuth } from '../hooks/useAuth';
-import { Building2 } from 'lucide-react';
+import logoImage from '../assets/Prática_2.png';
 
 export default function Login() {
   const [cnpj, setCnpj] = useState('');
@@ -36,9 +36,13 @@ export default function Login() {
           <div className="text-center space-y-6">
             <div className="flex justify-center">
               <div className="relative group">
-                <div className="absolute inset-0 bg-gradient-to-r from-red-500 to-red-600 rounded-3xl blur-xl opacity-50 group-hover:opacity-75 transition-opacity duration-500"></div>
-                <div className="relative bg-white rounded-3xl p-6 shadow-2xl transform group-hover:scale-105 transition-transform duration-300">
-                  <Building2 className="w-16 h-16 text-red-600" />
+                <div className="absolute inset-0 bg-gradient-to-r from-orange-400 to-blue-500 rounded-3xl blur-2xl opacity-40 group-hover:opacity-60 transition-opacity duration-500"></div>
+                <div className="relative bg-white rounded-3xl p-8 shadow-2xl transform group-hover:scale-105 transition-transform duration-300">
+                  <img
+                    src={logoImage}
+                    alt="Prática Engenharia"
+                    className="w-32 h-32 object-contain"
+                  />
                 </div>
               </div>
             </div>
