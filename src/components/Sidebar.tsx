@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { usePermissions } from '../hooks/usePermissions';
+import logoImage from '../assets/Prática_2.png';
 
 interface SidebarProps {
   currentPage: string;
@@ -76,14 +77,17 @@ export default function Sidebar({ currentPage, setCurrentPage, isOpen, setIsOpen
             <div className="flex items-center justify-between">
               <div className={`flex items-center space-x-3 ${!isOpen && 'lg:justify-center lg:w-full'}`}>
                 <div className="relative group">
-                  <div className="absolute inset-0 bg-red-500/30 rounded-xl blur-lg group-hover:bg-red-500/40 transition-all duration-300"></div>
-                  <div className="relative bg-gradient-to-br from-red-600 to-red-500 p-2 rounded-xl">
-                    <Building2 className="w-6 h-6 text-white" />
+                  <div className="absolute inset-0 bg-gradient-to-r from-orange-400/20 to-blue-500/20 rounded-xl blur-lg opacity-50 group-hover:opacity-70 transition-all duration-300"></div>
+                  <div className="relative">
+                    <img
+                      src={logoImage}
+                      alt="Prática Engenharia"
+                      className={`object-contain drop-shadow-xl transition-all duration-300 ${isOpen ? 'w-12 h-12' : 'w-10 h-10'}`}
+                    />
                   </div>
                 </div>
                 {isOpen && (
                   <div className="overflow-hidden">
-                    <h1 className="text-xl font-semibold text-white">ObraFlow</h1>
                     <p className="text-xs text-gray-400">
                       {user?.name || 'Usuário'}
                       {user?.role && (
