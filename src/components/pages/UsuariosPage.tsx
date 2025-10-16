@@ -131,7 +131,7 @@ export default function UsuariosPage() {
             Gerenciamento de Usuários
           </h1>
           <p className="text-gray-400">
-            Cadastre e gerencie funcionários
+            Cadastre e gerencie Usuários
           </p>
         </div>
         <button
