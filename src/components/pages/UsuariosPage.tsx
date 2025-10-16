@@ -139,7 +139,7 @@ export default function UsuariosPage() {
           className="flex items-center space-x-2 px-6 py-3 bg-gradient-to-r from-red-600 to-red-500 text-white rounded-xl hover:shadow-lg hover:shadow-red-500/50 transition-all duration-300 hover:scale-105"
         >
           <Plus size={20} />
-          <span>Novo Funcionário</span>
+          <span>Novo Usuário</span>
         </button>
       </div>
 
