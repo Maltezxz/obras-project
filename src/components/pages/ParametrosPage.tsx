@@ -146,7 +146,7 @@ export default function ParametrosPage() {
                   </li>
                   <li className="flex items-start space-x-2">
                     <span className="text-red-400">✓</span>
-                    <span>Criação e gerenciamento de contas de funcionários</span>
+                    <span>Criação e gerenciamento de contas de usuários</span>
                   </li>
                   <li className="flex items-start space-x-2">
                     <span className="text-red-400">✓</span>
