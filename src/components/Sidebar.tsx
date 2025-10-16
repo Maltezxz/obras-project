@@ -13,7 +13,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { usePermissions } from '../hooks/usePermissions';
-import logoImage from '../assets/Prática_2.png';
+import logoImage from '../assets/Prática_1.png';
 
 interface SidebarProps {
   currentPage: string;
@@ -73,38 +73,50 @@ export default function Sidebar({ currentPage, setCurrentPage, isOpen, setIsOpen
         } lg:translate-x-0 ${isOpen ? 'w-72' : 'lg:w-20'}`}
       >
         <div className="flex flex-col h-full">
-          <div className="p-6 border-b border-white/10">
-            <div className="flex items-center justify-between">
-              <div className={`flex items-center space-x-3 ${!isOpen && 'lg:justify-center lg:w-full'}`}>
-                <div className="relative group">
-                  <div className="absolute inset-0 bg-gradient-to-r from-orange-400/20 to-blue-500/20 rounded-xl blur-lg opacity-50 group-hover:opacity-70 transition-all duration-300"></div>
+          <div className="p-4 border-b border-white/10">
+            <div className="flex flex-col space-y-3">
+              <div className="flex items-center justify-between">
+                <div className={`relative group ${!isOpen && 'lg:mx-auto'}`}>
+                  <div className="absolute inset-0 bg-gradient-to-r from-orange-400/20 to-blue-500/20 rounded-lg blur-md opacity-50 group-hover:opacity-70 transition-all duration-300"></div>
                   <div className="relative">
                     <img
                       src={logoImage}
                       alt="Prática Engenharia"
-                      className={`object-contain drop-shadow-xl transition-all duration-300 ${isOpen ? 'w-12 h-12' : 'w-10 h-10'}`}
+                      className={`object-contain drop-shadow-lg transition-all duration-300 ${
+                        isOpen ? 'w-44 h-auto' : 'w-12 h-auto'
+                      }`}
                     />
                   </div>
                 </div>
                 {isOpen && (
-                  <div className="overflow-hidden">
-                    <p className="text-xs text-gray-400">
-                      {user?.name || 'Usuário'}
-                      {user?.role && (
-                        <span className="ml-2 px-2 py-0.5 bg-blue-500/20 text-blue-400 rounded text-xs">
-                          {user.role === 'host' ? 'Host' : 'Funcionário'}
-                        </span>
-                      )}
-                    </p>
-                  </div>
+                  <button
+                    onClick={() => setIsOpen(!isOpen)}
+                    className="hidden lg:flex items-center justify-center w-8 h-8 rounded-lg bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white transition-all duration-200 flex-shrink-0"
+                  >
+                    <ChevronLeft size={20} />
+                  </button>
                 )}
               </div>
-              <button
-                onClick={() => setIsOpen(!isOpen)}
-                className="hidden lg:flex items-center justify-center w-8 h-8 rounded-lg bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white transition-all duration-200"
-              >
-                {isOpen ? <ChevronLeft size={20} /> : <ChevronRight size={20} />}
-              </button>
+              {!isOpen && (
+                <button
+                  onClick={() => setIsOpen(!isOpen)}
+                  className="hidden lg:flex items-center justify-center w-8 h-8 rounded-lg bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white transition-all duration-200 mx-auto"
+                >
+                  <ChevronRight size={20} />
+                </button>
+              )}
+              {isOpen && (
+                <div className="px-2">
+                  <p className="text-xs text-gray-400">
+                    {user?.name || 'Usuário'}
+                    {user?.role && (
+                      <span className="ml-2 px-2 py-0.5 bg-blue-500/20 text-blue-400 rounded text-xs">
+                        {user.role === 'host' ? 'Host' : 'Funcionário'}
+                      </span>
+                    )}
+                  </p>
+                </div>
+              )}
             </div>
           </div>
 
