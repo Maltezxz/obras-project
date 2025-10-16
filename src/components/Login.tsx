@@ -3,7 +3,7 @@ import { useAuth } from '../hooks/useAuth';
 import logoImage from '../assets/pratica-logo.png';
 
 export default function Login() {
-  const [cnpj, setCnpj] = useState('');
+  const [cnpj, setCnpj] = useState(import.meta.env.VITE_DEFAULT_CNPJ || '');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
