@@ -265,7 +265,38 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
 
     const hostCnpj = user.cnpj || HOST_FAKE.cnpj;
-    // 1) Criar usuário na tabela users
+    const isFakeMode = user.id === 'host-fake-id';
+
+    console.log('[addEmployee] Iniciando cadastro:', { name: employeeData.name, email: employeeData.email, isFakeMode });
+
+    // Se estiver em modo fake, usar apenas localStorage
+    if (isFakeMode) {
+      console.log('[addEmployee] Modo fake - salvando apenas localmente');
+      const newEmployee: User = {
+        id: `fake-emp-${Date.now()}`,
+        name: employeeData.name,
+        email: employeeData.email,
+        role: 'funcionario',
+        host_id: user.id,
+        cnpj: hostCnpj,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
+
+      const list = loadEmployeesForCnpj(hostCnpj);
+      list.push(newEmployee);
+      saveEmployeesForCnpj(hostCnpj, list);
+
+      const passMap = loadPasswordsForCnpj(hostCnpj);
+      passMap[newEmployee.id] = password;
+      savePasswordsForCnpj(hostCnpj, passMap);
+
+      console.log('[addEmployee] Funcionário fake criado:', newEmployee.id);
+      return newEmployee;
+    }
+
+    // Modo normal: criar no Supabase
+    console.log('[addEmployee] Modo Supabase - criando no banco');
     const { data: tableUser, error: tableError } = await supabase
       .from('users')
       .insert({
@@ -279,24 +310,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       .single();
 
     if (tableError) {
-      throw new Error(`Erro ao criar funcionário na tabela: ${tableError.message}`);
+      console.error('[addEmployee] Erro ao criar na tabela:', tableError);
+      throw new Error(`Erro ao criar funcionário: ${tableError.message}`);
     }
 
-    // 2) Criar usuário no Auth (precisa de service role no backend; aqui tentaremos via signUp fallback)
-    const signupEmail = tableUser.email;
+    console.log('[addEmployee] Funcionário criado na tabela:', tableUser.id);
 
+    // Criar usuário no Auth
     const { error: authErr } = await supabase.auth.signUp({
-      email: signupEmail,
+      email: tableUser.email,
       password,
       options: { data: { name: tableUser.name, role: 'funcionario', host_id: tableUser.host_id } }
     });
 
     if (authErr) {
-      // Se não conseguir criar no Auth no cliente (por política), mantém tabela criada
-      console.warn('Falha ao criar auth user no cliente. Prosseguindo com tabela criada.', authErr);
+      console.warn('[addEmployee] Aviso ao criar auth:', authErr.message);
     }
 
-    // 3) Persistência local para login visual
+    // Persistência local para login
     const newEmployee: User = tableUser;
     const list = loadEmployeesForCnpj(hostCnpj);
     list.push(newEmployee);
@@ -306,6 +337,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     passMap[newEmployee.id] = password;
     savePasswordsForCnpj(hostCnpj, passMap);
 
+    console.log('[addEmployee] Funcionário criado com sucesso:', newEmployee.id);
     return newEmployee;
   };
 
