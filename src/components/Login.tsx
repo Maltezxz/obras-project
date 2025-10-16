@@ -3,9 +3,9 @@ import { useAuth } from '../hooks/useAuth';
 import { Building2 } from 'lucide-react';
 
 export default function Login() {
-  const [cnpj, setCnpj] = useState('89.263.465/0001-49');
-  const [username, setUsername] = useState('danilo');
-  const [password, setPassword] = useState('123456');
+  const [cnpj, setCnpj] = useState('');
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const { signIn } = useAuth();
