@@ -20,6 +20,7 @@ export default function RelatoriosPage() {
   const [filters, setFilters] = useState({
     startDate: '',
     endDate: '',
+    obra: '',
     ferramenta: '',
     usuario: '',
   });
@@ -76,6 +77,7 @@ export default function RelatoriosPage() {
   const filteredMovimentacoes = movimentacoes.filter(mov => {
     if (filters.startDate && new Date(mov.created_at) < new Date(filters.startDate)) return false;
     if (filters.endDate && new Date(mov.created_at) > new Date(filters.endDate)) return false;
+    if (filters.obra && mov.to_type === 'obra' && mov.to_id !== filters.obra) return false;
     if (filters.ferramenta && mov.ferramenta_id !== filters.ferramenta) return false;
     if (filters.usuario && mov.user_id !== filters.usuario) return false;
     return true;
@@ -146,7 +148,7 @@ export default function RelatoriosPage() {
         </button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
         <div className="space-y-2">
           <label className="block text-sm font-medium text-gray-200">
             Data Inicial
@@ -168,6 +170,23 @@ export default function RelatoriosPage() {
             onChange={(e) => setFilters({ ...filters, endDate: e.target.value })}
             className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-red-500/50 focus:border-red-500/50 transition-all duration-200"
           />
+        </div>
+        <div className="space-y-2">
+          <label className="block text-sm font-medium text-gray-200">
+            Obra
+          </label>
+          <select
+            value={filters.obra}
+            onChange={(e) => setFilters({ ...filters, obra: e.target.value })}
+            className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-red-500/50 focus:border-red-500/50 transition-all duration-200"
+          >
+            <option value="" className="bg-gray-900">Todas</option>
+            {obras.map((obra) => (
+              <option key={obra.id} value={obra.id} className="bg-gray-900">
+                {obra.title}
+              </option>
+            ))}
+          </select>
         </div>
         <div className="space-y-2">
           <label className="block text-sm font-medium text-gray-200">
