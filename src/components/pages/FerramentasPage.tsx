@@ -147,7 +147,7 @@ export default function FerramentasPage() {
         nf_image_url: nfImageBase64,
         image_url: toolImageBase64,
         data: formData.data || undefined,
-        valor: formData.valor ? parseFloat(formData.valor) : undefined,
+        valor: formData.valor ? parseFloat(formData.valor.replace(',', '.')) : undefined,
         tempo_garantia_dias: formData.tempo_garantia_dias ? parseInt(formData.tempo_garantia_dias) : undefined,
         garantia: formData.garantia.trim() || undefined,
         marca: formData.marca.trim() || undefined,
@@ -702,11 +702,16 @@ export default function FerramentasPage() {
                     Valor (R$)
                   </label>
                   <input
-                    type="number"
-                    step="0.01"
+                    type="text"
+                    inputMode="decimal"
                     value={formData.valor}
-                    onChange={(e) => setFormData({ ...formData, valor: e.target.value })}
-                    placeholder="0.00"
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      if (value === '' || /^\d*[.,]?\d{0,2}$/.test(value)) {
+                        setFormData({ ...formData, valor: value });
+                      }
+                    }}
+                    placeholder="0,00"
                     className="w-full px-3 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500/50 transition-all duration-200"
                   />
                 </div>
