@@ -130,7 +130,7 @@ export default function Login() {
 
           <div className="text-center">
             <p className="text-xs text-gray-500">
-              ObraFlow © 2025
+              Prática Engenharia © 2025
             </p>
           </div>
         </div>
