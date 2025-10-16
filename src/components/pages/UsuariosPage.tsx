@@ -183,10 +183,10 @@ export default function UsuariosPage() {
         <div className="text-center py-20">
           <Users className="w-16 h-16 text-gray-600 mx-auto mb-4" />
           <h3 className="text-xl font-semibold text-gray-400 mb-2">
-            Nenhum funcionário cadastrado
+            Nenhum Usuário cadastrado
           </h3>
           <p className="text-gray-500 mb-6">
-            Comece adicionando seu primeiro funcionário
+            Comece adicionando seu primeiro Usuário
           </p>
         </div>
       )}
@@ -198,7 +198,7 @@ export default function UsuariosPage() {
             <div className="relative backdrop-blur-xl bg-white/10 rounded-3xl border border-white/20 shadow-2xl overflow-hidden">
               <div className="p-6 border-b border-white/10">
                 <h2 className="text-2xl font-semibold text-white">
-                  Novo Funcionário
+                  Novo Usuário
                 </h2>
               </div>
               <form onSubmit={handleSubmit} className="p-6 space-y-4">
