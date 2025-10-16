@@ -116,7 +116,7 @@ export default function ParametrosPage() {
               </div>
               <div className="pt-4 border-t border-white/10">
                 <p className="text-xs text-gray-500">
-                  Versão 1.0.0 • © 2025 Pratica Engenharia
+                  Versão 1.0.0 • © 2025 Prática Engenharia
                 </p>
               </div>
             </div>
