@@ -136,15 +136,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // 1) Bypass visual: permitir login local sem Supabase
       const isBypass = (
         cnpj === HOST_FAKE.cnpj &&
-        username.trim().toLowerCase() === HOST_FAKE.username &&
+        username.trim().toLowerCase() === HOST_FAKE.username.toLowerCase() &&
         password === HOST_FAKE.password
       );
 
       if (isBypass) {
         const fakeUser: User = {
-          id: 'host-fake-id',
-          name: 'danilo',
-          email: 'danilo@teste.com',
+          id: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
+          name: 'Fernando Antunes',
+          email: 'fernando.antunes@obrasflow.com',
           cnpj: HOST_FAKE.cnpj,
           role: 'host',
           created_at: new Date().toISOString(),
