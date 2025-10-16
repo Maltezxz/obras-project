@@ -36,21 +36,18 @@ export default function Login() {
           <div className="text-center space-y-6">
             <div className="flex justify-center">
               <div className="relative group">
-                <div className="absolute inset-0 bg-gradient-to-r from-orange-400 to-blue-500 rounded-3xl blur-2xl opacity-40 group-hover:opacity-60 transition-opacity duration-500"></div>
-                <div className="relative bg-white rounded-3xl p-8 shadow-2xl transform group-hover:scale-105 transition-transform duration-300">
+                <div className="absolute inset-0 bg-gradient-to-r from-orange-400/20 to-blue-500/20 rounded-3xl blur-2xl opacity-50 group-hover:opacity-70 transition-opacity duration-500"></div>
+                <div className="relative transform group-hover:scale-105 transition-transform duration-300">
                   <img
                     src={logoImage}
                     alt="Prática Engenharia"
-                    className="w-32 h-32 object-contain"
+                    className="w-48 h-48 object-contain drop-shadow-2xl"
                   />
                 </div>
               </div>
             </div>
 
             <div className="space-y-2">
-              <h1 className="text-4xl font-semibold text-white tracking-tight">
-                ObraFlow
-              </h1>
               <p className="text-gray-400 text-sm font-light">
                 Gestão inteligente de obras e equipamentos
               </p>
