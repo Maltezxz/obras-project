@@ -4,7 +4,6 @@ import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../hooks/useAuth';
 import { useRefresh } from '../../contexts/RefreshContext';
 import { Obra } from '../../types';
-import { localObrasStorage } from '../../utils/localStorage';
 import { fileToBase64 } from '../../utils/fileUtils';
 
 export default function ObrasPage() {
@@ -27,33 +26,23 @@ export default function ObrasPage() {
     try {
       if (!user?.id) {
         setObras([]);
+        setLoading(false);
         return;
       }
 
-      // Tentar carregar do Supabase primeiro
-      try {
-        const { data, error } = await supabase
-          .from('obras')
-          .select('*')
-          .eq('owner_id', user.id)
-          .order('created_at', { ascending: false });
+      const { data, error } = await supabase
+        .from('obras')
+        .select('*')
+        .eq('owner_id', user.id)
+        .order('created_at', { ascending: false });
 
-        if (error) {
-          console.warn('Erro ao carregar do Supabase, usando dados locais:', error);
-          throw error;
-        }
-        
-        setObras(data || []);
-        console.log('✅ Obras carregadas do Supabase');
-        return;
-      } catch {
-        console.log('🔄 Usando dados locais como fallback');
-        
-        // Fallback para dados locais
-        const localObras = localObrasStorage.getObrasByOwner(user.id);
-        setObras(localObras);
-        console.log('✅ Obras carregadas do localStorage');
+      if (error) {
+        console.error('Erro ao carregar obras do Supabase:', error);
+        throw error;
       }
+
+      setObras(data || []);
+      console.log('✅ Obras carregadas do Supabase');
     } catch (error) {
       console.error('Error loading obras:', error);
       setObras([]);
@@ -108,29 +97,19 @@ export default function ObrasPage() {
 
       console.log('Criando obra com dados:', obraData);
 
-      // Tentar salvar no Supabase primeiro
-      try {
-        const { data, error } = await supabase
-          .from('obras')
-          .insert(obraData)
-          .select()
-          .single();
+      const { data, error } = await supabase
+        .from('obras')
+        .insert(obraData)
+        .select()
+        .single();
 
-        if (error) {
-          console.warn('Erro do Supabase, salvando localmente:', error);
-          throw error;
-        }
-
-        console.log('✅ Obra criada no Supabase:', data);
-        alert('Obra criada com sucesso!');
-      } catch {
-        console.log('🔄 Salvando obra localmente');
-        
-        // Fallback para dados locais
-        const newObra = localObrasStorage.addObra(obraData);
-        console.log('✅ Obra criada localmente:', newObra);
-        alert('Obra criada com sucesso! (Salva localmente)');
+      if (error) {
+        console.error('Erro ao criar obra no Supabase:', error);
+        throw new Error(`Erro ao criar obra: ${error.message}`);
       }
+
+      console.log('✅ Obra criada no Supabase:', data);
+      alert('Obra criada com sucesso!');
 
       setShowModal(false);
       setFormData({
@@ -169,32 +148,18 @@ export default function ObrasPage() {
         end_date: newStatus === 'finalizada' ? new Date().toISOString().split('T')[0] : null
       };
 
-      // Tentar atualizar no Supabase primeiro
-      try {
-        const { error } = await supabase
-          .from('obras')
-          .update(updateData)
-          .eq('id', obraId);
+      const { error } = await supabase
+        .from('obras')
+        .update(updateData)
+        .eq('id', obraId);
 
-        if (error) {
-          console.warn('Erro do Supabase, atualizando localmente:', error);
-          throw error;
-        }
-
-        console.log('✅ Obra atualizada no Supabase');
-        alert(`Obra ${newStatus === 'ativa' ? 'reativada' : 'finalizada'} com sucesso!`);
-      } catch {
-        console.log('🔄 Atualizando obra localmente');
-        
-        // Fallback para dados locais
-        const success = localObrasStorage.updateObra(obraId, updateData);
-        if (success) {
-          console.log('✅ Obra atualizada localmente');
-          alert(`Obra ${newStatus === 'ativa' ? 'reativada' : 'finalizada'} com sucesso! (Atualizada localmente)`);
-        } else {
-          throw new Error('Obra não encontrada para atualização');
-        }
+      if (error) {
+        console.error('Erro ao atualizar obra no Supabase:', error);
+        throw new Error(`Erro ao atualizar obra: ${error.message}`);
       }
+
+      console.log('✅ Obra atualizada no Supabase');
+      alert(`Obra ${newStatus === 'ativa' ? 'reativada' : 'finalizada'} com sucesso!`);
 
       await loadObras();
       triggerRefresh(); // Dispara atualização global
@@ -209,32 +174,18 @@ export default function ObrasPage() {
     if (!confirm('Tem certeza que deseja excluir esta obra? Todos os dados relacionados serão perdidos.')) return;
 
     try {
-      // Tentar excluir do Supabase primeiro
-      try {
-        const { error } = await supabase
-          .from('obras')
-          .delete()
-          .eq('id', obraId);
+      const { error } = await supabase
+        .from('obras')
+        .delete()
+        .eq('id', obraId);
 
-        if (error) {
-          console.warn('Erro do Supabase, excluindo localmente:', error);
-          throw error;
-        }
-
-        console.log('✅ Obra excluída do Supabase');
-        alert('Obra excluída com sucesso!');
-      } catch {
-        console.log('🔄 Excluindo obra localmente');
-        
-        // Fallback para dados locais
-        const success = localObrasStorage.deleteObra(obraId);
-        if (success) {
-          console.log('✅ Obra excluída localmente');
-          alert('Obra excluída com sucesso! (Removida localmente)');
-        } else {
-          throw new Error('Obra não encontrada para exclusão');
-        }
+      if (error) {
+        console.error('Erro ao excluir obra do Supabase:', error);
+        throw new Error(`Erro ao excluir obra: ${error.message}`);
       }
+
+      console.log('✅ Obra excluída do Supabase');
+      alert('Obra excluída com sucesso!');
 
       await loadObras();
       triggerRefresh(); // Dispara atualização global

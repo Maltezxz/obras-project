@@ -5,9 +5,7 @@ import { useAuth } from '../../hooks/useAuth';
 import { usePermissions } from '../../hooks/usePermissions';
 import { useRefresh } from '../../contexts/RefreshContext';
 import { Ferramenta, Obra } from '../../types';
-import type { LocalFerramenta } from '../../utils/localFerramentasStorage';
 import { fileToBase64 } from '../../utils/fileUtils';
-import { localFerramentasStorage } from '../../utils/localFerramentasStorage';
 
 export default function FerramentasPage() {
   const { user } = useAuth();
@@ -59,49 +57,33 @@ export default function FerramentasPage() {
 
       const ownerId = user?.role === 'host' ? user.id : user?.host_id;
 
-      // Tentar carregar ferramentas do Supabase primeiro
-      try {
-        const ferramRes = await supabase
-          .from('ferramentas')
-          .select('*')
-          .eq('owner_id', ownerId)
-          .order('created_at', { ascending: false });
+      const ferramRes = await supabase
+        .from('ferramentas')
+        .select('*')
+        .eq('owner_id', ownerId)
+        .order('created_at', { ascending: false });
 
-        if (ferramRes.error) {
-          console.warn('Erro ao carregar ferramentas do Supabase, usando dados locais:', ferramRes.error);
-          throw ferramRes.error;
-        }
-        
-        setFerramentas(ferramRes.data || []);
-        console.log('✅ Ferramentas carregadas do Supabase');
-      } catch {
-        console.log('🔄 Usando dados locais como fallback');
-        
-        // Fallback para dados locais
-        const localFerramentas = localFerramentasStorage.getFerramentasByOwner(ownerId || '');
-        setFerramentas(localFerramentas);
-        console.log('✅ Ferramentas carregadas do localStorage');
+      if (ferramRes.error) {
+        console.error('Erro ao carregar ferramentas do Supabase:', ferramRes.error);
+        throw ferramRes.error;
       }
 
-      // Tentar carregar obras do Supabase
-      try {
-        const obrasRes = await supabase
-          .from('obras')
-          .select('*')
-          .eq('owner_id', ownerId)
-          .eq('status', 'ativa');
+      setFerramentas(ferramRes.data || []);
+      console.log('✅ Ferramentas carregadas do Supabase');
 
-        if (obrasRes.error) {
-          console.warn('Erro ao carregar obras do Supabase:', obrasRes.error);
-          throw obrasRes.error;
-        }
-        
-        setObras(obrasRes.data || []);
-        console.log('✅ Obras carregadas do Supabase');
-      } catch {
-        console.log('🔄 Obras não disponíveis localmente');
-        setObras([]);
+      const obrasRes = await supabase
+        .from('obras')
+        .select('*')
+        .eq('owner_id', ownerId)
+        .eq('status', 'ativa');
+
+      if (obrasRes.error) {
+        console.error('Erro ao carregar obras do Supabase:', obrasRes.error);
+        throw obrasRes.error;
       }
+
+      setObras(obrasRes.data || []);
+      console.log('✅ Obras carregadas do Supabase');
     } catch (error) {
       console.error('Error loading data:', error);
     } finally {
@@ -190,17 +172,9 @@ export default function FerramentasPage() {
 
         console.log('✅ Ferramenta criada no Supabase');
         alert('Equipamento criado com sucesso!');
-      } catch {
-        console.log('🔄 Salvando ferramenta localmente');
-        
-        // Fallback para dados locais
-        const newFerramenta = localFerramentasStorage.addFerramenta({
-          ...(ferramentaData as Omit<LocalFerramenta, 'id' | 'created_at' | 'updated_at'>),
-          current_type: formData.current_id ? 'obra' : undefined,
-          owner_id: ownerId || '',
-        });
-        console.log('✅ Ferramenta criada localmente:', newFerramenta);
-        alert('Equipamento criado com sucesso! (Salvo localmente)');
+      } catch (error) {
+        console.error('Erro ao criar ferramenta:', error);
+        throw error;
       }
 
       setShowModal(false);
