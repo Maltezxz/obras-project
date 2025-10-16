@@ -86,7 +86,7 @@ export default function FerramentasPage() {
       }
 
       setObras(obrasRes.data || []);
-      console.log('✅ Obras carregadas do Supabase');
+      console.log('✅ Obras carregadas do Supabase:', obrasRes.data?.length || 0, 'obras');
     } catch (error) {
       console.error('Error loading data:', error);
     } finally {
@@ -255,7 +255,9 @@ export default function FerramentasPage() {
     setLoading(true);
 
     try {
-      await supabase
+      const obraDestino = obras.find(o => o.id === moveData.to_id);
+
+      const { error: updateError } = await supabase
         .from('ferramentas')
         .update({
           current_type: moveData.to_type,
@@ -264,20 +266,27 @@ export default function FerramentasPage() {
         })
         .eq('id', selectedFerramenta.id);
 
-      await supabase.from('movimentacoes').insert({
+      if (updateError) throw updateError;
+
+      const { error: movError } = await supabase.from('movimentacoes').insert({
         ferramenta_id: selectedFerramenta.id,
         from_type: selectedFerramenta.current_type,
         from_id: selectedFerramenta.current_id,
         to_type: moveData.to_type,
         to_id: moveData.to_id,
         user_id: user?.id,
-        note: moveData.note,
+        note: moveData.note || `Movido para ${obraDestino?.title || 'obra'}`,
       });
+
+      if (movError) throw movError;
+
+      alert(`Equipamento movido para ${obraDestino?.title || 'obra'} com sucesso!`);
 
       setShowMoveModal(false);
       setSelectedFerramenta(null);
       setMoveData({ to_type: 'obra', to_id: '', note: '' });
       await loadData();
+      triggerRefresh();
     } catch (error: unknown) {
       console.error('Error moving ferramenta:', error);
       const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido ao mover equipamento';
@@ -934,19 +943,27 @@ export default function FerramentasPage() {
                   <label className="block text-sm font-medium text-gray-200">
                     Obra de Destino
                   </label>
-                  <select
-                    value={moveData.to_id}
-                    onChange={(e) => setMoveData({ ...moveData, to_id: e.target.value })}
-                    className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-red-500/50 focus:border-red-500/50 transition-all duration-200"
-                    required
-                  >
-                    <option value="" className="bg-gray-900">Selecione...</option>
-                    {obras.map((obra) => (
-                      <option key={obra.id} value={obra.id} className="bg-gray-900">
-                        {obra.title}
-                      </option>
-                    ))}
-                  </select>
+                  {obras.length === 0 ? (
+                    <div className="p-4 rounded-xl bg-yellow-500/10 border border-yellow-500/20">
+                      <p className="text-sm text-yellow-400">
+                        Nenhuma obra ativa cadastrada. Cadastre uma obra primeiro.
+                      </p>
+                    </div>
+                  ) : (
+                    <select
+                      value={moveData.to_id}
+                      onChange={(e) => setMoveData({ ...moveData, to_id: e.target.value })}
+                      className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-red-500/50 focus:border-red-500/50 transition-all duration-200"
+                      required
+                    >
+                      <option value="" className="bg-gray-900">Selecione...</option>
+                      {obras.map((obra) => (
+                        <option key={obra.id} value={obra.id} className="bg-gray-900">
+                          {obra.title}
+                        </option>
+                      ))}
+                    </select>
+                  )}
                 </div>
                 <div className="space-y-2">
                   <label className="block text-sm font-medium text-gray-200">
