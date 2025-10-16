@@ -48,6 +48,7 @@ export interface Ferramenta {
   descricao?: string;
   nf?: string;
   nf_image_url?: string;
+  image_url?: string;
   data?: string;
   valor?: number;
   tempo_garantia_dias?: number;

@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
-import { Plus, Wrench, Trash2, ArrowRight, Package, XCircle } from 'lucide-react';
+import { Plus, Wrench, Trash2, ArrowRight, Package, XCircle, Image as ImageIcon } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../hooks/useAuth';
 import { usePermissions } from '../../hooks/usePermissions';
@@ -18,6 +18,8 @@ export default function FerramentasPage() {
   const [showMoveModal, setShowMoveModal] = useState(false);
   const [selectedFerramenta, setSelectedFerramenta] = useState<Ferramenta | null>(null);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     name: '',
     tipo: '',
@@ -29,6 +31,7 @@ export default function FerramentasPage() {
     descricao: '',
     nf: '',
     nf_image: null as File | null,
+    tool_image: null as File | null,
     data: '',
     valor: '',
     tempo_garantia_dias: '',
@@ -117,22 +120,32 @@ export default function FerramentasPage() {
         }
       }
 
+      // Converter imagem da ferramenta para base64 se existir
+      let toolImageBase64: string | undefined;
+      if (formData.tool_image) {
+        try {
+          toolImageBase64 = await fileToBase64(formData.tool_image);
+        } catch (error) {
+          console.error('Erro ao converter imagem da ferramenta para base64:', error);
+          throw new Error('Erro ao processar imagem da ferramenta');
+        }
+      }
+
       const initialStatus: 'em_uso' | 'disponivel' = formData.current_id ? 'em_uso' : 'disponivel';
 
-      const ferramentaData = {
+      const ferramentaData: any = {
         name: formData.name.trim(),
         tipo: formData.tipo.trim() || undefined,
         modelo: formData.modelo.trim(),
         serial: formData.serial.trim(),
         current_type: formData.current_id ? 'obra' : undefined,
         current_id: formData.current_id || undefined,
-        cadastrado_por: user.id,
-        owner_id: ownerId,
         status: initialStatus,
         // Novos campos
         descricao: formData.descricao.trim() || undefined,
         nf: formData.nf.trim() || undefined,
         nf_image_url: nfImageBase64,
+        image_url: toolImageBase64,
         data: formData.data || undefined,
         valor: formData.valor ? parseFloat(formData.valor) : undefined,
         tempo_garantia_dias: formData.tempo_garantia_dias ? parseInt(formData.tempo_garantia_dias) : undefined,
@@ -145,39 +158,62 @@ export default function FerramentasPage() {
         obra: formData.obra.trim() || undefined,
       };
 
-      console.log('Criando ferramenta com dados:', ferramentaData);
+      if (!isEditing) {
+        ferramentaData.cadastrado_por = user.id;
+        ferramentaData.owner_id = ownerId;
+      }
 
-      // Tentar salvar no Supabase primeiro
+      console.log(isEditing ? 'Atualizando ferramenta com dados:' : 'Criando ferramenta com dados:', ferramentaData);
+
       try {
-        const { data: newFerramenta, error: ferramError } = await supabase
-          .from('ferramentas')
-          .insert(ferramentaData)
-          .select()
-          .single();
+        if (isEditing && editingId) {
+          // Atualizar ferramenta existente
+          const { error: updateError } = await supabase
+            .from('ferramentas')
+            .update(ferramentaData)
+            .eq('id', editingId);
 
-        if (ferramError) {
-          console.warn('Erro do Supabase, salvando localmente:', ferramError);
-          throw ferramError;
+          if (updateError) {
+            console.error('Erro do Supabase ao atualizar:', updateError);
+            throw updateError;
+          }
+
+          console.log('✅ Ferramenta atualizada no Supabase');
+          alert('Equipamento atualizado com sucesso!');
+        } else {
+          // Criar nova ferramenta
+          const { data: newFerramenta, error: ferramError } = await supabase
+            .from('ferramentas')
+            .insert(ferramentaData)
+            .select()
+            .single();
+
+          if (ferramError) {
+            console.warn('Erro do Supabase, salvando localmente:', ferramError);
+            throw ferramError;
+          }
+
+          if (formData.current_id) {
+            await supabase.from('movimentacoes').insert({
+              ferramenta_id: newFerramenta.id,
+              to_type: 'obra',
+              to_id: formData.current_id,
+              user_id: user.id,
+              note: 'Cadastro inicial',
+            });
+          }
+
+          console.log('✅ Ferramenta criada no Supabase');
+          alert('Equipamento criado com sucesso!');
         }
-
-        if (formData.current_id) {
-          await supabase.from('movimentacoes').insert({
-            ferramenta_id: newFerramenta.id,
-            to_type: 'obra',
-            to_id: formData.current_id,
-            user_id: user.id,
-            note: 'Cadastro inicial',
-          });
-        }
-
-        console.log('✅ Ferramenta criada no Supabase');
-        alert('Equipamento criado com sucesso!');
       } catch (error) {
-        console.error('Erro ao criar ferramenta:', error);
+        console.error('Erro ao salvar ferramenta:', error);
         throw error;
       }
 
       setShowModal(false);
+      setIsEditing(false);
+      setEditingId(null);
       setFormData({
         name: '',
         tipo: '',
@@ -188,6 +224,7 @@ export default function FerramentasPage() {
         descricao: '',
         nf: '',
         nf_image: null,
+        tool_image: null,
         data: '',
         valor: '',
         tempo_garantia_dias: '',
@@ -199,12 +236,12 @@ export default function FerramentasPage() {
         usuario: '',
         obra: '',
       });
-      
+
       await loadData();
-      triggerRefresh(); // Dispara atualização global
+      triggerRefresh();
     } catch (error: unknown) {
-      console.error('Error creating ferramenta:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido ao criar ferramenta';
+      console.error('Error saving ferramenta:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido ao salvar ferramenta';
       alert(errorMessage);
     } finally {
       setLoading(false);
@@ -333,16 +370,50 @@ export default function FerramentasPage() {
                 : 'bg-white/5 border-white/10 hover:bg-white/10'
             }`}
             onClick={() => {
-              setSelectedFerramenta(ferramenta);
-              if (isHost) {
+              if (isHost || canCreateFerramentas) {
+                // Preencher formulário com dados da ferramenta para edição
+                setIsEditing(true);
+                setEditingId(ferramenta.id);
+                setFormData({
+                  name: ferramenta.name || '',
+                  tipo: ferramenta.tipo || '',
+                  modelo: ferramenta.modelo || '',
+                  serial: ferramenta.serial || '',
+                  current_type: 'obra',
+                  current_id: ferramenta.current_id || '',
+                  descricao: ferramenta.descricao || '',
+                  nf: ferramenta.nf || '',
+                  nf_image: null,
+                  tool_image: null,
+                  data: ferramenta.data || '',
+                  valor: ferramenta.valor ? String(ferramenta.valor) : '',
+                  tempo_garantia_dias: ferramenta.tempo_garantia_dias ? String(ferramenta.tempo_garantia_dias) : '',
+                  garantia: ferramenta.garantia || '',
+                  marca: ferramenta.marca || '',
+                  numero_lacre: ferramenta.numero_lacre || '',
+                  numero_placa: ferramenta.numero_placa || '',
+                  adesivo: ferramenta.adesivo || '',
+                  usuario: ferramenta.usuario || '',
+                  obra: ferramenta.obra || '',
+                });
+                setShowModal(true);
+              } else {
+                setSelectedFerramenta(ferramenta);
                 setShowDetailsModal(true);
-              } else if (canTransferFerramentas) {
-                setShowMoveModal(true);
               }
             }}
           >
             <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent"></div>
             <div className="relative p-6">
+              {ferramenta.image_url && (
+                <div className="mb-4 rounded-xl overflow-hidden border border-white/10">
+                  <img
+                    src={ferramenta.image_url}
+                    alt={ferramenta.name}
+                    className="w-full h-48 object-cover"
+                  />
+                </div>
+              )}
               <div className="flex items-start justify-between mb-4">
                 <div className={`p-3 rounded-xl ${
                   ferramenta.status === 'desaparecida'
@@ -470,15 +541,41 @@ export default function FerramentasPage() {
                     </div>
                     <div>
                       <h2 className="text-xl font-bold text-white">
-                        Novo Equipamento
+                        {isEditing ? 'Editar Equipamento' : 'Novo Equipamento'}
                       </h2>
                       <p className="text-gray-400 text-sm">
-                        Cadastre um novo equipamento
+                        {isEditing ? 'Atualize as informações do equipamento' : 'Cadastre um novo equipamento'}
                       </p>
                     </div>
                   </div>
                   <button
-                    onClick={() => setShowModal(false)}
+                    onClick={() => {
+                      setShowModal(false);
+                      setIsEditing(false);
+                      setEditingId(null);
+                      setFormData({
+                        name: '',
+                        tipo: '',
+                        modelo: '',
+                        serial: '',
+                        current_type: 'obra',
+                        current_id: '',
+                        descricao: '',
+                        nf: '',
+                        nf_image: null,
+                        tool_image: null,
+                        data: '',
+                        valor: '',
+                        tempo_garantia_dias: '',
+                        garantia: '',
+                        marca: '',
+                        numero_lacre: '',
+                        numero_placa: '',
+                        adesivo: '',
+                        usuario: '',
+                        obra: '',
+                      });
+                    }}
                     className="p-2 rounded-lg bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white transition-all duration-200"
                   >
                     <XCircle className="w-4 h-4" />
@@ -543,6 +640,27 @@ export default function FerramentasPage() {
                     placeholder="Número da nota fiscal"
                     className="w-full px-3 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500/50 focus:border-green-500/50 transition-all duration-200"
                   />
+                </div>
+
+                {/* Upload de Imagem da Ferramenta */}
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-gray-200">
+                    Imagem do Equipamento
+                  </label>
+                  <div className="relative">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => setFormData({ ...formData, tool_image: e.target.files?.[0] || null })}
+                      className="w-full px-3 py-3 bg-white/5 border border-white/10 rounded-xl text-white file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-blue-500 file:text-white hover:file:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 transition-all duration-200"
+                    />
+                    {formData.tool_image && (
+                      <div className="mt-2 p-2 bg-green-500/10 border border-green-500/20 rounded-lg flex items-center space-x-2">
+                        <ImageIcon className="w-4 h-4 text-green-400" />
+                        <p className="text-green-400 text-sm">✓ {formData.tool_image.name}</p>
+                      </div>
+                    )}
+                  </div>
                 </div>
 
                 {/* Upload de Imagem da NF */}
@@ -742,7 +860,11 @@ export default function FerramentasPage() {
                 <div className="flex space-x-3 pt-4">
                   <button
                     type="button"
-                    onClick={() => setShowModal(false)}
+                    onClick={() => {
+                      setShowModal(false);
+                      setIsEditing(false);
+                      setEditingId(null);
+                    }}
                     className="flex-1 px-4 py-3 bg-white/5 border border-white/10 text-white rounded-xl hover:bg-white/10 transition-all duration-200 font-medium"
                   >
                     Cancelar
@@ -755,12 +877,12 @@ export default function FerramentasPage() {
                     {loading ? (
                       <>
                         <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                        <span>Salvando...</span>
+                        <span>{isEditing ? 'Atualizando...' : 'Salvando...'}</span>
                       </>
                     ) : (
                       <>
                         <Wrench className="w-4 h-4" />
-                        <span>Salvar</span>
+                        <span>{isEditing ? 'Atualizar' : 'Salvar'}</span>
                       </>
                     )}
                   </button>
