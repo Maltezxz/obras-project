@@ -55,6 +55,14 @@ export default function UsuariosPage() {
     setLoading(true);
 
     try {
+      console.log('🔍 [UsuariosPage] Iniciando criação de usuário...');
+      console.log('🔍 [UsuariosPage] Dados do formulário:', {
+        name: formData.name,
+        email: formData.email,
+        hasPassword: !!formData.password
+      });
+      console.log('🔍 [UsuariosPage] Usuário logado:', user);
+
       if (!addEmployee) {
         throw new Error('Função de adicionar funcionário não disponível');
       }
@@ -71,21 +79,27 @@ export default function UsuariosPage() {
         throw new Error('Senha é obrigatória');
       }
 
+      console.log('🔍 [UsuariosPage] Chamando addEmployee...');
+
       const newEmployee = await addEmployee({
         name: formData.name.trim(),
         email: formData.email.trim(),
         role: 'funcionario',
       }, formData.password.trim());
 
-      console.log('Funcionário criado:', newEmployee);
-      
+      console.log('✅ [UsuariosPage] Funcionário criado:', newEmployee);
+
       setShowModal(false);
       setFormData({ name: '', email: '', password: '' });
       await loadFuncionarios();
-      
+
       alert(`Funcionário ${newEmployee.name} criado com sucesso!\n\nCredenciais de login:\nCNPJ: ${user?.cnpj || 'o mesmo do host'}\nUsuário: ${newEmployee.name}\nSenha: ${formData.password}`);
     } catch (error: unknown) {
-      console.error('Error creating user:', error);
+      console.error('❌ [UsuariosPage] Erro ao criar usuário:', error);
+      if (error instanceof Error) {
+        console.error('❌ [UsuariosPage] Mensagem de erro:', error.message);
+        console.error('❌ [UsuariosPage] Stack:', error.stack);
+      }
       const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
       alert('Erro ao criar usuário: ' + errorMessage);
     } finally {
