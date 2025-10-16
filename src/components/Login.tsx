@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useAuth } from '../hooks/useAuth';
-import logoImage from '../assets/Prática_2.png';
+import logoImage from '../assets/pratica-logo.png';
 
 export default function Login() {
   const [cnpj, setCnpj] = useState('');

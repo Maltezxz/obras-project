@@ -13,7 +13,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { usePermissions } from '../hooks/usePermissions';
-import logoImage from '../assets/Prática_1.png';
+import logoImage from '../assets/pratica-logo-horizontal.png';
 
 interface SidebarProps {
   currentPage: string;
