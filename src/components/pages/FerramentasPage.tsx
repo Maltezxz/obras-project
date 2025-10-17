@@ -19,6 +19,7 @@ export default function FerramentasPage() {
   const [showMoveModal, setShowMoveModal] = useState(false);
   const [selectedFerramenta, setSelectedFerramenta] = useState<Ferramenta | null>(null);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
+  const [showDepositoModal, setShowDepositoModal] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [formData, setFormData] = useState({
@@ -485,15 +486,27 @@ export default function FerramentasPage() {
             Cadastre e gerencie seus equipamentos
           </p>
         </div>
-        {canCreateFerramentas && (
+        <div className="flex items-center space-x-3">
           <button
-            onClick={() => setShowModal(true)}
-            className="flex items-center space-x-2 px-6 py-3 bg-gradient-to-r from-red-600 to-red-500 text-white rounded-xl hover:shadow-lg hover:shadow-red-500/50 transition-all duration-300 hover:scale-105"
+            onClick={() => setShowDepositoModal(true)}
+            className="flex items-center space-x-2 px-6 py-3 bg-gradient-to-r from-amber-600 to-orange-500 text-white rounded-xl hover:shadow-lg hover:shadow-amber-500/50 transition-all duration-300 hover:scale-105"
           >
-            <Plus size={20} />
-            <span>Novo Equipamento</span>
+            <Warehouse size={20} />
+            <span>Depósito</span>
+            <span className="ml-1 px-2 py-0.5 bg-white/20 rounded-full text-xs font-semibold">
+              {ferramentas.filter(f => f.status === 'disponivel').length}
+            </span>
           </button>
-        )}
+          {canCreateFerramentas && (
+            <button
+              onClick={() => setShowModal(true)}
+              className="flex items-center space-x-2 px-6 py-3 bg-gradient-to-r from-red-600 to-red-500 text-white rounded-xl hover:shadow-lg hover:shadow-red-500/50 transition-all duration-300 hover:scale-105"
+            >
+              <Plus size={20} />
+              <span>Novo Equipamento</span>
+            </button>
+          )}
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -1261,6 +1274,108 @@ export default function FerramentasPage() {
                   </div>
                 )}
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Depósito */}
+      {showDepositoModal && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-gradient-to-br from-gray-900 to-gray-800 rounded-2xl border border-white/10 w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col animate-scale-in">
+            <div className="p-6 border-b border-white/10 bg-gradient-to-r from-amber-600/20 to-orange-500/20">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-3">
+                  <div className="p-3 bg-gradient-to-br from-amber-600 to-orange-500 rounded-xl">
+                    <Warehouse className="w-6 h-6 text-white" />
+                  </div>
+                  <div>
+                    <h2 className="text-2xl font-bold text-white">Depósito</h2>
+                    <p className="text-amber-300 text-sm font-medium">
+                      {ferramentas.filter(f => f.status === 'disponivel').length} / {ferramentas.length} equipamentos no depósito
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setShowDepositoModal(false)}
+                  className="p-2 hover:bg-white/10 rounded-lg transition-colors"
+                >
+                  <XCircle size={24} className="text-gray-400 hover:text-white transition-colors" />
+                </button>
+              </div>
+            </div>
+
+            <div className="flex-1 overflow-y-auto p-6">
+              {ferramentas.filter(f => f.status === 'disponivel').length === 0 ? (
+                <div className="text-center py-20">
+                  <Warehouse className="w-16 h-16 text-gray-600 mx-auto mb-4" />
+                  <h3 className="text-xl font-semibold text-gray-400 mb-2">
+                    Depósito Vazio
+                  </h3>
+                  <p className="text-gray-500">
+                    Não há equipamentos no depósito no momento
+                  </p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {ferramentas
+                    .filter(f => f.status === 'disponivel')
+                    .map((ferramenta) => (
+                      <div
+                        key={ferramenta.id}
+                        className="relative overflow-hidden rounded-xl border border-amber-500/20 bg-gradient-to-br from-amber-500/5 to-orange-500/5 backdrop-blur-xl transition-all duration-300 hover:border-amber-500/40 hover:shadow-lg hover:shadow-amber-500/20 group"
+                      >
+                        <div className="absolute inset-0 bg-gradient-to-br from-amber-400/5 to-transparent"></div>
+                        <div className="relative p-4">
+                          {ferramenta.image_url && (
+                            <div className="mb-3 rounded-lg overflow-hidden border border-white/10">
+                              <img
+                                src={ferramenta.image_url}
+                                alt={ferramenta.name}
+                                className="w-full h-32 object-cover"
+                              />
+                            </div>
+                          )}
+                          <div className="flex items-start justify-between mb-3">
+                            <div className="p-2 rounded-lg bg-gradient-to-br from-amber-600 to-orange-500">
+                              <Wrench className="w-5 h-5 text-white" />
+                            </div>
+                            <div className="flex items-center space-x-1">
+                              <Warehouse size={14} className="text-amber-400 animate-pulse" />
+                              <span className="text-xs text-amber-400 font-semibold">Depósito</span>
+                            </div>
+                          </div>
+                          <div className="space-y-2">
+                            <div>
+                              <h3 className="text-base font-semibold text-white mb-1">
+                                {ferramenta.name}
+                              </h3>
+                              {ferramenta.modelo && (
+                                <p className="text-gray-400 text-xs">
+                                  Modelo: {ferramenta.modelo}
+                                </p>
+                              )}
+                              {ferramenta.serial && (
+                                <p className="text-gray-400 text-xs">
+                                  Serial: {ferramenta.serial}
+                                </p>
+                              )}
+                            </div>
+                            <button
+                              onClick={() => {
+                                toggleDeposito(ferramenta);
+                                setShowDepositoModal(false);
+                              }}
+                              className="w-full mt-2 px-3 py-2 bg-gradient-to-r from-green-600 to-green-500 text-white rounded-lg text-sm font-medium hover:shadow-lg hover:shadow-green-500/50 transition-all duration-200 hover:scale-105"
+                            >
+                              Retirar do Depósito
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                </div>
+              )}
             </div>
           </div>
         </div>
