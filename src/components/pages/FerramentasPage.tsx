@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
-import { Plus, Wrench, Trash2, ArrowRight, Package, XCircle, Image as ImageIcon } from 'lucide-react';
+import { Plus, Wrench, Trash2, ArrowRight, Package, XCircle, Image as ImageIcon, Warehouse } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../hooks/useAuth';
 import { usePermissions } from '../../hooks/usePermissions';
@@ -378,7 +378,51 @@ export default function FerramentasPage() {
     }
   };
 
-  const getLocationName = (type?: string, id?: string) => {
+  const toggleDeposito = async (ferramenta: Ferramenta) => {
+    const isInDeposito = ferramenta.status === 'disponivel';
+    const newStatus = isInDeposito ? 'em_uso' : 'disponivel';
+
+    try {
+      const updateData: any = {
+        status: newStatus
+      };
+
+      if (newStatus === 'disponivel') {
+        updateData.current_type = null;
+        updateData.current_id = null;
+      }
+
+      const { error } = await supabase
+        .from('ferramentas')
+        .update(updateData)
+        .eq('id', ferramenta.id);
+
+      if (error) throw error;
+
+      await supabase.from('historico').insert({
+        tipo_evento: 'movimentacao',
+        descricao: `Equipamento "${ferramenta.name}" ${isInDeposito ? 'saiu do' : 'foi para o'} depósito`,
+        user_id: user?.id,
+        owner_id: user?.id,
+        metadata: {
+          ferramenta_nome: ferramenta.name,
+          ferramenta_id: ferramenta.id,
+          status_anterior: ferramenta.status,
+          status_novo: newStatus,
+          acao: isInDeposito ? 'saiu_deposito' : 'entrou_deposito'
+        }
+      });
+
+      await loadData();
+      triggerRefresh();
+    } catch (error) {
+      console.error('Error updating status:', error);
+      alert('Erro ao atualizar status');
+    }
+  };
+
+  const getLocationName = (type?: string, id?: string, status?: string) => {
+    if (status === 'disponivel') return '🏢 Depósito';
     if (!type || !id) return 'Sem localização';
     if (type === 'obra') {
       const obra = obras.find(o => o.id === id);
@@ -484,11 +528,39 @@ export default function FerramentasPage() {
                   )}
                 </div>
                 <div className="flex items-center space-x-2">
+                  {ferramenta.status !== 'desaparecida' && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        toggleDeposito(ferramenta);
+                      }}
+                      className={`group/deposito relative px-3 py-1.5 rounded-lg transition-all duration-300 ${
+                        ferramenta.status === 'disponivel'
+                          ? 'bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-lg shadow-amber-500/50 animate-pulse'
+                          : 'bg-gray-500/10 text-gray-400 hover:bg-amber-500/20 hover:text-amber-400 hover:scale-105'
+                      }`}
+                      title={ferramenta.status === 'disponivel' ? 'No depósito - Clique para retirar' : 'Enviar para depósito'}
+                    >
+                      <div className="flex items-center space-x-1.5">
+                        <Warehouse size={16} className={`${
+                          ferramenta.status === 'disponivel'
+                            ? 'animate-bounce'
+                            : 'group-hover/deposito:scale-110 transition-transform'
+                        }`} />
+                        <span className="text-xs font-semibold">
+                          {ferramenta.status === 'disponivel' ? 'Depósito' : 'Dep.'}
+                        </span>
+                      </div>
+                      {ferramenta.status === 'disponivel' && (
+                        <div className="absolute inset-0 rounded-lg bg-gradient-to-r from-amber-400 to-orange-400 opacity-30 blur-sm animate-pulse"></div>
+                      )}
+                    </button>
+                  )}
                   {canTransferFerramentas && (
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
-                      
+
                       setSelectedFerramenta(ferramenta);
                       setShowMoveModal(true);
                     }}
@@ -546,7 +618,7 @@ export default function FerramentasPage() {
                 <div className="p-3 rounded-lg bg-white/5 border border-white/10">
                   <p className="text-xs text-gray-400 mb-1">Localização atual</p>
                   <p className="text-sm text-white">
-                    {getLocationName(ferramenta.current_type, ferramenta.current_id)}
+                    {getLocationName(ferramenta.current_type, ferramenta.current_id, ferramenta.status)}
                   </p>
                 </div>
               </div>
@@ -972,7 +1044,7 @@ export default function FerramentasPage() {
                 <div className="p-4 rounded-xl bg-white/5 border border-white/10">
                   <p className="text-xs text-gray-400 mb-1">Localização atual</p>
                   <p className="text-sm text-white">
-                    {getLocationName(selectedFerramenta.current_type, selectedFerramenta.current_id)}
+                    {getLocationName(selectedFerramenta.current_type, selectedFerramenta.current_id, selectedFerramenta.status)}
                   </p>
                 </div>
                 <div className="space-y-2">
