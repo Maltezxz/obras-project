@@ -129,6 +129,8 @@ export default function HistoricoPage() {
           throw movError;
         }
 
+        console.log('📦 Movimentações carregadas:', movData?.length || 0);
+        console.log('🔍 Dados das movimentações:', movData);
         setMovimentacoes(movData || []);
         console.log('✅ Movimentações carregadas do Supabase');
       } catch {
@@ -632,9 +634,11 @@ export default function HistoricoPage() {
                   <div className="flex items-center space-x-2 text-gray-400">
                     <Building2 size={16} />
                     <span>
-                      {mov.from_type === 'obra' 
+                      {mov.from_type === 'deposito'
+                        ? '🏢 Depósito'
+                        : mov.from_type === 'obra'
                         ? mov.obra_origem?.title || 'Obra não encontrada'
-                        : 'Estabelecimento'
+                        : mov.from_type || 'Não especificado'
                       }
                     </span>
                   </div>
@@ -645,9 +649,11 @@ export default function HistoricoPage() {
                   <div className="flex items-center space-x-2 text-gray-400">
                     <Building2 size={16} />
                     <span>
-                      {mov.to_type === 'obra' 
+                      {mov.to_type === 'deposito'
+                        ? '🏢 Depósito'
+                        : mov.to_type === 'obra'
                         ? mov.obra_destino?.title || 'Obra não encontrada'
-                        : 'Estabelecimento'
+                        : mov.to_type || 'Não especificado'
                       }
                     </span>
                   </div>
