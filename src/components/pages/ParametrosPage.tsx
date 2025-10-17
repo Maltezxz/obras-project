@@ -101,13 +101,15 @@ export default function ParametrosPage() {
       console.log('=== INICIANDO SALVAMENTO DE PERMISSÕES ===');
       console.log('Usuário selecionado:', selectedUser.id);
       console.log('Host logado:', user.id);
+      console.log('Role do host:', user.role);
       console.log('Obras selecionadas:', Array.from(selectedObras));
 
       const obraIds = Array.from(selectedObras);
 
       const { data, error } = await supabase.rpc('manage_user_obra_permissions', {
+        p_host_id: user.id,
         p_user_id: selectedUser.id,
-        p_obra_ids: obraIds
+        p_obra_ids: obraIds.length > 0 ? obraIds : []
       });
 
       console.log('Resultado da função:', data);
@@ -123,7 +125,7 @@ export default function ParametrosPage() {
       }
 
       console.log('✓ Permissões salvas com sucesso:', data);
-      alert('Permissões atualizadas com sucesso!');
+      alert(`Permissões atualizadas com sucesso! ${data.permissions_count} obra(s) permitida(s).`);
       await loadData();
       setSelectedUser(null);
     } catch (error: unknown) {
