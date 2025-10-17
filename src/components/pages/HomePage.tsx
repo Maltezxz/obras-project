@@ -166,10 +166,6 @@ export default function HomePage() {
                       key={obra.id}
                       className="relative p-4 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 transition-all duration-200 group"
                     >
-                      <div className="absolute top-3 right-3 flex items-center space-x-1.5 px-2.5 py-1 rounded-lg bg-white/10 border border-white/20 backdrop-blur-sm">
-                        <Wrench className="w-3.5 h-3.5 text-gray-400" />
-                        <span className="text-xs font-medium text-gray-300">{equipmentCount}</span>
-                      </div>
                       {obra.image_url && (
                         <div className="mb-3 rounded-lg overflow-hidden">
                           <img
@@ -179,7 +175,7 @@ export default function HomePage() {
                           />
                         </div>
                       )}
-                      <h3 className="text-white font-medium mb-1 group-hover:text-red-400 transition-colors pr-14">
+                      <h3 className="text-white font-medium mb-1 group-hover:text-red-400 transition-colors">
                         {obra.title}
                       </h3>
                       <p className="text-gray-400 text-sm">{obra.endereco}</p>
@@ -188,6 +184,10 @@ export default function HomePage() {
                           Eng: {obra.engenheiro}
                         </p>
                       )}
+                      <div className="absolute bottom-3 right-3 flex items-center space-x-1.5 px-2.5 py-1.5 rounded-lg bg-black/70 backdrop-blur-sm">
+                        <Wrench className="w-3.5 h-3.5 text-white" />
+                        <span className="text-xs font-bold text-white">{equipmentCount}</span>
+                      </div>
                     </div>
                   );
                 })
