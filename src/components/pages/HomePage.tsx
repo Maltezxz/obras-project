@@ -4,6 +4,7 @@ import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../hooks/useAuth';
 import { useRefresh } from '../../contexts/RefreshContext';
 import { Obra, Ferramenta } from '../../types';
+import { getFilteredObras } from '../../utils/permissions';
 
 export default function HomePage() {
   const { user } = useAuth();
@@ -39,8 +40,14 @@ export default function HomePage() {
         throw obrasRes.error;
       }
 
-      setObras(obrasRes.data || []);
-      console.log('✅ Obras carregadas do Supabase na Home');
+      const allObras = obrasRes.data || [];
+      const filteredObras = await getFilteredObras(user.id, user.role, user.host_id, allObras);
+
+      setObras(filteredObras);
+      console.log('✅ Obras carregadas e filtradas do Supabase na Home:', {
+        total: allObras.length,
+        permitidas: filteredObras.length
+      });
 
       const ferramRes = await supabase
         .from('ferramentas')

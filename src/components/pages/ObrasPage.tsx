@@ -5,6 +5,7 @@ import { useAuth } from '../../hooks/useAuth';
 import { useRefresh } from '../../contexts/RefreshContext';
 import { Obra } from '../../types';
 import { fileToBase64 } from '../../utils/fileUtils';
+import { getFilteredObras } from '../../utils/permissions';
 
 export default function ObrasPage() {
   const { user } = useAuth();
@@ -30,10 +31,12 @@ export default function ObrasPage() {
         return;
       }
 
+      const ownerId = user.role === 'host' ? user.id : user.host_id;
+
       const { data, error } = await supabase
         .from('obras')
         .select('*')
-        .eq('owner_id', user.id)
+        .eq('owner_id', ownerId)
         .order('created_at', { ascending: false });
 
       if (error) {
@@ -41,8 +44,11 @@ export default function ObrasPage() {
         throw error;
       }
 
-      setObras(data || []);
-      console.log('✅ Obras carregadas do Supabase');
+      const allObras = data || [];
+      const filteredObras = await getFilteredObras(user.id, user.role, user.host_id, allObras);
+
+      setObras(filteredObras);
+      console.log('✅ Obras carregadas e filtradas do Supabase');
     } catch (error) {
       console.error('Error loading obras:', error);
       setObras([]);

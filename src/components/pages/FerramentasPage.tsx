@@ -6,6 +6,7 @@ import { usePermissions } from '../../hooks/usePermissions';
 import { useRefresh } from '../../contexts/RefreshContext';
 import { Ferramenta, Obra } from '../../types';
 import { fileToBase64 } from '../../utils/fileUtils';
+import { getFilteredObras } from '../../utils/permissions';
 
 export default function FerramentasPage() {
   const { user } = useAuth();
@@ -85,8 +86,11 @@ export default function FerramentasPage() {
         throw obrasRes.error;
       }
 
-      setObras(obrasRes.data || []);
-      console.log('✅ Obras carregadas do Supabase:', obrasRes.data?.length || 0, 'obras');
+      const allObras = obrasRes.data || [];
+      const filteredObras = await getFilteredObras(user.id, user.role, user.host_id, allObras);
+
+      setObras(filteredObras);
+      console.log('✅ Obras carregadas e filtradas do Supabase:', filteredObras.length, 'obras');
     } catch (error) {
       console.error('Error loading data:', error);
     } finally {
