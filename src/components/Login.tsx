@@ -31,9 +31,9 @@ export default function Login() {
 
       <div className="absolute inset-0 backdrop-blur-3xl"></div>
 
-      <div className="relative min-h-screen flex items-center justify-center p-4">
-        <div className="w-full max-w-md space-y-8 animate-fade-in">
-          <div className="text-center space-y-6">
+      <div className="relative min-h-screen flex items-center justify-center p-3 sm:p-4">
+        <div className="w-full max-w-md space-y-6 sm:space-y-8 animate-fade-in">
+          <div className="text-center space-y-4 sm:space-y-6">
             <div className="flex justify-center">
               <div className="relative group">
                 <div className="absolute inset-0 bg-gradient-to-r from-orange-400/20 to-blue-500/20 rounded-3xl blur-2xl opacity-50 group-hover:opacity-70 transition-opacity duration-500"></div>
@@ -41,14 +41,14 @@ export default function Login() {
                   <img
                     src={logoImage}
                     alt="Prática Engenharia"
-                    className="w-48 h-48 object-contain drop-shadow-2xl"
+                    className="w-36 h-36 sm:w-48 sm:h-48 object-contain drop-shadow-2xl"
                   />
                 </div>
               </div>
             </div>
 
             <div className="space-y-2">
-              <p className="text-gray-400 text-sm font-light">
+              <p className="text-gray-400 text-xs sm:text-sm font-light">
                 Gestão inteligente de obras e equipamentos
               </p>
             </div>
@@ -60,7 +60,7 @@ export default function Login() {
             <div className="relative backdrop-blur-xl bg-white/10 rounded-3xl border border-white/20 shadow-2xl overflow-hidden">
               <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent"></div>
 
-              <form onSubmit={handleSubmit} className="relative p-8 space-y-6">
+              <form onSubmit={handleSubmit} className="relative p-5 sm:p-8 space-y-4 sm:space-y-6">
                 <div className="space-y-4">
                   <div className="space-y-2">
                     <label htmlFor="cnpj" className="block text-sm font-medium text-gray-200">

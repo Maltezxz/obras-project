@@ -54,7 +54,7 @@ export default function Dashboard() {
         }`}
       >
         <header className="sticky top-0 z-20 bg-black/50 backdrop-blur-xl border-b border-white/10">
-          <div className="flex items-center justify-between px-6 py-4">
+          <div className="flex items-center justify-between px-4 sm:px-6 py-3 sm:py-4">
             <button
               onClick={() => setSidebarOpen(!sidebarOpen)}
               className="lg:hidden p-2 rounded-lg bg-white/5 hover:bg-white/10 text-white transition-all duration-200"
@@ -65,7 +65,7 @@ export default function Dashboard() {
           </div>
         </header>
 
-        <main className="p-6">
+        <main className="p-3 sm:p-4 md:p-6">
           <div className="max-w-7xl mx-auto">
             {renderPage()}
           </div>
