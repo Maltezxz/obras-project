@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
-import { History, Building2, Wrench, MapPin, Calendar, Filter, Search, Download } from 'lucide-react';
+import { History, Building2, Wrench, MapPin, Calendar, Filter, Search, Download, CheckCircle, Plus } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../hooks/useAuth';
 import { Obra, Ferramenta, Movimentacao } from '../../types';
@@ -23,17 +23,33 @@ interface HistoricoMovimentacao extends Movimentacao {
   estabelecimento_destino?: Estabelecimento;
 }
 
+interface HistoricoEntry {
+  id: string;
+  tipo_evento: 'obra_criada' | 'obra_finalizada' | 'movimentacao';
+  descricao: string;
+  obra_id?: string;
+  movimentacao_id?: string;
+  user_id?: string;
+  owner_id: string;
+  metadata: Record<string, unknown>;
+  created_at: string;
+  obra?: Obra;
+  movimentacao?: HistoricoMovimentacao;
+}
+
 export default function HistoricoPage() {
   const { user } = useAuth();
   const [obras, setObras] = useState<HistoricoObra[]>([]);
   const [movimentacoes, setMovimentacoes] = useState<HistoricoMovimentacao[]>([]);
+  const [historico, setHistorico] = useState<HistoricoEntry[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'obras' | 'movimentacoes'>('obras');
+  const [activeTab, setActiveTab] = useState<'timeline' | 'obras' | 'movimentacoes'>('timeline');
   const [filters, setFilters] = useState({
     status: '',
     dateFrom: '',
     dateTo: '',
     search: '',
+    tipoEvento: '',
   });
 
   const loadData = useCallback(async () => {
@@ -45,6 +61,29 @@ export default function HistoricoPage() {
       }
 
       const ownerId = user.role === 'host' ? user.id : user.host_id;
+
+      // Carregar histórico completo
+      try {
+        const { data: historicoData, error: historicoError } = await supabase
+          .from('historico')
+          .select(`
+            *,
+            obra:obras(*),
+            movimentacao:movimentacoes(*)
+          `)
+          .eq('owner_id', ownerId)
+          .order('created_at', { ascending: false });
+
+        if (historicoError) {
+          console.warn('Erro ao carregar histórico do Supabase:', historicoError);
+        } else {
+          setHistorico(historicoData || []);
+          console.log('✅ Histórico carregado do Supabase');
+        }
+      } catch (error) {
+        console.log('Erro ao carregar histórico:', error);
+        setHistorico([]);
+      }
 
       // Carregar obras
       try {
@@ -104,6 +143,14 @@ export default function HistoricoPage() {
   useEffect(() => {
     loadData();
   }, [loadData]);
+
+  const filteredHistorico = historico.filter(entry => {
+    if (filters.dateFrom && new Date(entry.created_at) < new Date(filters.dateFrom)) return false;
+    if (filters.dateTo && new Date(entry.created_at) > new Date(filters.dateTo)) return false;
+    if (filters.tipoEvento && entry.tipo_evento !== filters.tipoEvento) return false;
+    if (filters.search && !entry.descricao.toLowerCase().includes(filters.search.toLowerCase())) return false;
+    return true;
+  });
 
   const filteredObras = obras.filter(obra => {
     if (filters.status && obra.status !== filters.status) return false;
@@ -207,6 +254,17 @@ export default function HistoricoPage() {
       {/* Tabs */}
       <div className="flex space-x-1 bg-white/5 rounded-xl p-1">
         <button
+          onClick={() => setActiveTab('timeline')}
+          className={`flex-1 flex items-center justify-center space-x-2 px-4 py-3 rounded-lg transition-all duration-200 ${
+            activeTab === 'timeline'
+              ? 'bg-red-500/10 text-red-400'
+              : 'text-gray-400 hover:text-white'
+          }`}
+        >
+          <History size={20} />
+          <span>Timeline ({filteredHistorico.length})</span>
+        </button>
+        <button
           onClick={() => setActiveTab('obras')}
           className={`flex-1 flex items-center justify-center space-x-2 px-4 py-3 rounded-lg transition-all duration-200 ${
             activeTab === 'obras'
@@ -254,6 +312,24 @@ export default function HistoricoPage() {
             </div>
           </div>
 
+          {activeTab === 'timeline' && (
+            <div>
+              <label className="block text-sm font-medium text-gray-200 mb-2">
+                Tipo de Evento
+              </label>
+              <select
+                value={filters.tipoEvento}
+                onChange={(e) => setFilters({ ...filters, tipoEvento: e.target.value })}
+                className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-red-500/50 focus:border-red-500/50 transition-all duration-200"
+              >
+                <option value="">Todos</option>
+                <option value="obra_criada">Obra Criada</option>
+                <option value="obra_finalizada">Obra Finalizada</option>
+                <option value="movimentacao">Movimentação</option>
+              </select>
+            </div>
+          )}
+
           {activeTab === 'obras' && (
             <div>
               <label className="block text-sm font-medium text-gray-200 mb-2">
@@ -298,7 +374,92 @@ export default function HistoricoPage() {
       </div>
 
       {/* Conteúdo */}
-      {activeTab === 'obras' ? (
+      {activeTab === 'timeline' ? (
+        <div className="space-y-4">
+          {filteredHistorico.map((entry) => {
+            const getEventIcon = () => {
+              switch (entry.tipo_evento) {
+                case 'obra_criada':
+                  return <Plus className="w-5 h-5" />;
+                case 'obra_finalizada':
+                  return <CheckCircle className="w-5 h-5" />;
+                case 'movimentacao':
+                  return <Wrench className="w-5 h-5" />;
+                default:
+                  return <History className="w-5 h-5" />;
+              }
+            };
+
+            const getEventColor = () => {
+              switch (entry.tipo_evento) {
+                case 'obra_criada':
+                  return 'from-green-600 to-green-500';
+                case 'obra_finalizada':
+                  return 'from-blue-600 to-blue-500';
+                case 'movimentacao':
+                  return 'from-yellow-600 to-yellow-500';
+                default:
+                  return 'from-gray-600 to-gray-500';
+              }
+            };
+
+            const getEventLabel = () => {
+              switch (entry.tipo_evento) {
+                case 'obra_criada':
+                  return 'Obra Criada';
+                case 'obra_finalizada':
+                  return 'Obra Finalizada';
+                case 'movimentacao':
+                  return 'Movimentação';
+                default:
+                  return 'Evento';
+              }
+            };
+
+            return (
+              <div
+                key={entry.id}
+                className="bg-white/5 rounded-xl p-6 border border-white/10 hover:bg-white/10 transition-all duration-200"
+              >
+                <div className="flex items-start justify-between mb-4">
+                  <div className="flex items-center space-x-3">
+                    <div className={`p-2 bg-gradient-to-br ${getEventColor()} rounded-lg`}>
+                      {getEventIcon()}
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-semibold text-white">
+                        {entry.descricao}
+                      </h3>
+                      <p className="text-gray-400 text-sm">
+                        {new Date(entry.created_at).toLocaleString('pt-BR')}
+                      </p>
+                    </div>
+                  </div>
+                  <span
+                    className={`px-3 py-1 rounded-full text-xs font-medium bg-white/10 text-gray-300`}
+                  >
+                    {getEventLabel()}
+                  </span>
+                </div>
+
+                {entry.metadata && Object.keys(entry.metadata).length > 0 && (
+                  <div className="mt-4 pt-4 border-t border-white/10">
+                    <h4 className="text-sm font-medium text-gray-300 mb-2">Detalhes</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm text-gray-400">
+                      {Object.entries(entry.metadata).map(([key, value]) => (
+                        <div key={key}>
+                          <span className="font-medium text-gray-300">{key}: </span>
+                          <span>{String(value)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      ) : activeTab === 'obras' ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredObras.map((obra) => (
             <div
@@ -440,7 +601,8 @@ export default function HistoricoPage() {
         </div>
       )}
 
-      {((activeTab === 'obras' && filteredObras.length === 0) || 
+      {((activeTab === 'timeline' && filteredHistorico.length === 0) ||
+        (activeTab === 'obras' && filteredObras.length === 0) ||
         (activeTab === 'movimentacoes' && filteredMovimentacoes.length === 0)) && (
         <div className="text-center py-20">
           <History className="w-16 h-16 text-gray-600 mx-auto mb-4" />
@@ -448,7 +610,9 @@ export default function HistoricoPage() {
             Nenhum histórico encontrado
           </h3>
           <p className="text-gray-500">
-            {activeTab === 'obras' 
+            {activeTab === 'timeline'
+              ? 'Não há eventos que correspondam aos filtros aplicados'
+              : activeTab === 'obras'
               ? 'Não há obras que correspondam aos filtros aplicados'
               : 'Não há movimentações que correspondam aos filtros aplicados'
             }

@@ -109,6 +109,20 @@ export default function ObrasPage() {
       }
 
       console.log('✅ Obra criada no Supabase:', data);
+
+      await supabase.from('historico').insert({
+        tipo_evento: 'obra_criada',
+        descricao: `Obra "${data.title}" foi criada`,
+        obra_id: data.id,
+        user_id: user.id,
+        owner_id: user.id,
+        metadata: {
+          endereco: data.endereco,
+          engenheiro: data.engenheiro,
+          start_date: data.start_date
+        }
+      });
+
       alert('Obra criada com sucesso!');
 
       setShowModal(false);
@@ -159,6 +173,22 @@ export default function ObrasPage() {
       }
 
       console.log('✅ Obra atualizada no Supabase');
+
+      if (newStatus === 'finalizada') {
+        const obra = obras.find(o => o.id === obraId);
+        await supabase.from('historico').insert({
+          tipo_evento: 'obra_finalizada',
+          descricao: `Obra "${obra?.title}" foi finalizada`,
+          obra_id: obraId,
+          user_id: user?.id,
+          owner_id: user?.id,
+          metadata: {
+            end_date: new Date().toISOString().split('T')[0],
+            endereco: obra?.endereco
+          }
+        });
+      }
+
       alert(`Obra ${newStatus === 'ativa' ? 'reativada' : 'finalizada'} com sucesso!`);
 
       await loadObras();
