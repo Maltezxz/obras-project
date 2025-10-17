@@ -399,9 +399,42 @@ export default function FerramentasPage() {
 
       if (error) throw error;
 
+      // Criar registro na tabela movimentacoes
+      const movimentacaoData: any = {
+        ferramenta_id: ferramenta.id,
+        user_id: user?.id,
+        note: isInDeposito ? 'Retirado do depósito' : 'Enviado para o depósito'
+      };
+
+      if (isInDeposito) {
+        // Saindo do depósito
+        movimentacaoData.from_type = 'deposito';
+        movimentacaoData.from_id = null;
+        movimentacaoData.to_type = 'obra';
+        movimentacaoData.to_id = null;
+      } else {
+        // Indo para o depósito
+        movimentacaoData.from_type = ferramenta.current_type;
+        movimentacaoData.from_id = ferramenta.current_id;
+        movimentacaoData.to_type = 'deposito';
+        movimentacaoData.to_id = null;
+      }
+
+      const { data: movData, error: movError } = await supabase
+        .from('movimentacoes')
+        .insert(movimentacaoData)
+        .select()
+        .single();
+
+      if (movError) {
+        console.error('Erro ao criar movimentação:', movError);
+      }
+
+      // Criar registro no histórico
       await supabase.from('historico').insert({
         tipo_evento: 'movimentacao',
         descricao: `Equipamento "${ferramenta.name}" ${isInDeposito ? 'saiu do' : 'foi para o'} depósito`,
+        movimentacao_id: movData?.id,
         user_id: user?.id,
         owner_id: user?.id,
         metadata: {
@@ -409,7 +442,9 @@ export default function FerramentasPage() {
           ferramenta_id: ferramenta.id,
           status_anterior: ferramenta.status,
           status_novo: newStatus,
-          acao: isInDeposito ? 'saiu_deposito' : 'entrou_deposito'
+          acao: isInDeposito ? 'saiu_deposito' : 'entrou_deposito',
+          localizacao_origem: isInDeposito ? 'Depósito' : (ferramenta.current_id ? getLocationName(ferramenta.current_type, ferramenta.current_id, ferramenta.status) : 'Sem localização'),
+          localizacao_destino: isInDeposito ? 'A definir' : 'Depósito'
         }
       });
 
