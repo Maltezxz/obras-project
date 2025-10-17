@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { History, Building2, Wrench, MapPin, Calendar, Filter, Search, Download, CheckCircle, Plus } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../hooks/useAuth';
+import { useRefresh } from '../../contexts/RefreshContext';
 import { Obra, Ferramenta, Movimentacao } from '../../types';
 
 interface HistoricoObra extends Obra {
@@ -39,6 +40,7 @@ interface HistoricoEntry {
 
 export default function HistoricoPage() {
   const { user } = useAuth();
+  const { refreshTrigger } = useRefresh();
   const [obras, setObras] = useState<HistoricoObra[]>([]);
   const [movimentacoes, setMovimentacoes] = useState<HistoricoMovimentacao[]>([]);
   const [historico, setHistorico] = useState<HistoricoEntry[]>([]);
@@ -142,7 +144,69 @@ export default function HistoricoPage() {
 
   useEffect(() => {
     loadData();
-  }, [loadData]);
+  }, [loadData, refreshTrigger]);
+
+  useEffect(() => {
+    if (!user?.id) return;
+
+    const ownerId = user.role === 'host' ? user.id : user.host_id;
+
+    const historicoChannel = supabase
+      .channel('historico-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'historico',
+          filter: `owner_id=eq.${ownerId}`,
+        },
+        (payload) => {
+          console.log('Histórico atualizado em tempo real:', payload);
+          loadData();
+        }
+      )
+      .subscribe();
+
+    const obrasChannel = supabase
+      .channel('obras-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'obras',
+          filter: `owner_id=eq.${ownerId}`,
+        },
+        (payload) => {
+          console.log('Obras atualizadas em tempo real:', payload);
+          loadData();
+        }
+      )
+      .subscribe();
+
+    const movimentacoesChannel = supabase
+      .channel('movimentacoes-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'movimentacoes',
+        },
+        (payload) => {
+          console.log('Movimentações atualizadas em tempo real:', payload);
+          loadData();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(historicoChannel);
+      supabase.removeChannel(obrasChannel);
+      supabase.removeChannel(movimentacoesChannel);
+    };
+  }, [user, loadData]);
 
   const filteredHistorico = historico.filter(entry => {
     if (filters.dateFrom && new Date(entry.created_at) < new Date(filters.dateFrom)) return false;

@@ -194,12 +194,26 @@ export default function FerramentasPage() {
           }
 
           if (formData.current_id) {
-            await supabase.from('movimentacoes').insert({
+            const { data: movData } = await supabase.from('movimentacoes').insert({
               ferramenta_id: newFerramenta.id,
               to_type: 'obra',
               to_id: formData.current_id,
               user_id: user.id,
               note: 'Cadastro inicial',
+            }).select().single();
+
+            const obraInicial = obras.find(o => o.id === formData.current_id);
+            await supabase.from('historico').insert({
+              tipo_evento: 'movimentacao',
+              descricao: `Equipamento "${formData.name}" cadastrado em ${obraInicial?.title || 'obra'}`,
+              movimentacao_id: movData?.id,
+              user_id: user.id,
+              owner_id: user.id,
+              metadata: {
+                ferramenta_nome: formData.name,
+                obra: obraInicial?.title || 'obra',
+                observacao: 'Cadastro inicial'
+              }
             });
           }
 
@@ -268,7 +282,7 @@ export default function FerramentasPage() {
 
       if (updateError) throw updateError;
 
-      const { error: movError } = await supabase.from('movimentacoes').insert({
+      const { data: movData, error: movError } = await supabase.from('movimentacoes').insert({
         ferramenta_id: selectedFerramenta.id,
         from_type: selectedFerramenta.current_type,
         from_id: selectedFerramenta.current_id,
@@ -276,9 +290,22 @@ export default function FerramentasPage() {
         to_id: moveData.to_id,
         user_id: user?.id,
         note: moveData.note || `Movido para ${obraDestino?.title || 'obra'}`,
-      });
+      }).select().single();
 
       if (movError) throw movError;
+
+      await supabase.from('historico').insert({
+        tipo_evento: 'movimentacao',
+        descricao: `Equipamento "${selectedFerramenta.name}" movido para ${obraDestino?.title || 'obra'}`,
+        movimentacao_id: movData?.id,
+        user_id: user?.id,
+        owner_id: user?.id,
+        metadata: {
+          ferramenta_nome: selectedFerramenta.name,
+          destino: obraDestino?.title || 'obra',
+          observacao: moveData.note || ''
+        }
+      });
 
       alert(`Equipamento movido para ${obraDestino?.title || 'obra'} com sucesso!`);
 
@@ -323,7 +350,24 @@ export default function FerramentasPage() {
         .eq('id', ferramenta.id);
 
       if (error) throw error;
+
+      if (newStatus === 'desaparecida') {
+        await supabase.from('historico').insert({
+          tipo_evento: 'movimentacao',
+          descricao: `Equipamento "${ferramenta.name}" marcado como desaparecido`,
+          user_id: user?.id,
+          owner_id: user?.id,
+          metadata: {
+            ferramenta_nome: ferramenta.name,
+            ferramenta_id: ferramenta.id,
+            status_anterior: ferramenta.status,
+            status_novo: 'desaparecida'
+          }
+        });
+      }
+
       await loadData();
+      triggerRefresh();
     } catch (error) {
       console.error('Error updating status:', error);
       alert('Erro ao atualizar status');
