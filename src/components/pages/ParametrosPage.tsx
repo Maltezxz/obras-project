@@ -98,11 +98,21 @@ export default function ParametrosPage() {
 
     setSaving(true);
     try {
-      await supabase
+      console.log('Iniciando salvamento de permissões para usuário:', selectedUser.id);
+      console.log('Host ID:', user.id);
+      console.log('Obras selecionadas:', Array.from(selectedObras));
+
+      const { error: deleteError } = await supabase
         .from('user_obra_permissions')
         .delete()
         .eq('user_id', selectedUser.id)
         .eq('host_id', user.id);
+
+      if (deleteError) {
+        console.error('Erro ao deletar permissões antigas:', deleteError);
+      } else {
+        console.log('Permissões antigas deletadas com sucesso');
+      }
 
       const newPermissions = Array.from(selectedObras).map(obraId => ({
         user_id: selectedUser.id,
@@ -110,20 +120,36 @@ export default function ParametrosPage() {
         host_id: user.id
       }));
 
-      if (newPermissions.length > 0) {
-        const { error } = await supabase
-          .from('user_obra_permissions')
-          .insert(newPermissions);
+      console.log('Novas permissões a inserir:', newPermissions);
 
-        if (error) throw error;
+      if (newPermissions.length > 0) {
+        const { data, error } = await supabase
+          .from('user_obra_permissions')
+          .insert(newPermissions)
+          .select();
+
+        if (error) {
+          console.error('Erro detalhado ao inserir permissões:', {
+            message: error.message,
+            details: error.details,
+            hint: error.hint,
+            code: error.code
+          });
+          throw new Error(`Erro ao inserir permissões: ${error.message}`);
+        }
+
+        console.log('Permissões inseridas com sucesso:', data);
+      } else {
+        console.log('Nenhuma permissão selecionada, usuário sem acesso a nenhuma obra');
       }
 
       alert('Permissões atualizadas com sucesso!');
       await loadData();
       setSelectedUser(null);
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Erro ao salvar permissões:', error);
-      alert('Erro ao salvar permissões');
+      const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido ao salvar permissões';
+      alert(`Erro ao salvar permissões: ${errorMessage}`);
     } finally {
       setSaving(false);
     }
