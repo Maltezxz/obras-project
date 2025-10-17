@@ -12,6 +12,10 @@ export default function HomePage() {
   const [ferramentas, setFerramentas] = useState<Ferramenta[]>([]);
   const [loading, setLoading] = useState(true);
 
+  const getEquipmentCountByObra = (obraId: string) => {
+    return ferramentas.filter(f => f.current_id === obraId && f.current_type === 'obra').length;
+  };
+
   const loadData = useCallback(async () => {
     try {
       if (!user?.id) {
@@ -155,31 +159,38 @@ export default function HomePage() {
                   Nenhuma obra ativa
                 </p>
               ) : (
-                obras.slice(0, 5).map((obra) => (
-                  <div
-                    key={obra.id}
-                    className="p-4 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 transition-all duration-200 group"
-                  >
-                    {obra.image_url && (
-                      <div className="mb-3 rounded-lg overflow-hidden">
-                        <img
-                          src={obra.image_url}
-                          alt={obra.title}
-                          className="w-full h-24 object-cover group-hover:scale-105 transition-transform duration-200"
-                        />
+                obras.slice(0, 5).map((obra) => {
+                  const equipmentCount = getEquipmentCountByObra(obra.id);
+                  return (
+                    <div
+                      key={obra.id}
+                      className="relative p-4 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 transition-all duration-200 group"
+                    >
+                      <div className="absolute top-3 right-3 flex items-center space-x-1.5 px-2.5 py-1 rounded-lg bg-white/10 border border-white/20 backdrop-blur-sm">
+                        <Wrench className="w-3.5 h-3.5 text-gray-400" />
+                        <span className="text-xs font-medium text-gray-300">{equipmentCount}</span>
                       </div>
-                    )}
-                    <h3 className="text-white font-medium mb-1 group-hover:text-red-400 transition-colors">
-                      {obra.title}
-                    </h3>
-                    <p className="text-gray-400 text-sm">{obra.endereco}</p>
-                    {obra.engenheiro && (
-                      <p className="text-gray-500 text-xs mt-1">
-                        Eng: {obra.engenheiro}
-                      </p>
-                    )}
-                  </div>
-                ))
+                      {obra.image_url && (
+                        <div className="mb-3 rounded-lg overflow-hidden">
+                          <img
+                            src={obra.image_url}
+                            alt={obra.title}
+                            className="w-full h-24 object-cover group-hover:scale-105 transition-transform duration-200"
+                          />
+                        </div>
+                      )}
+                      <h3 className="text-white font-medium mb-1 group-hover:text-red-400 transition-colors pr-14">
+                        {obra.title}
+                      </h3>
+                      <p className="text-gray-400 text-sm">{obra.endereco}</p>
+                      {obra.engenheiro && (
+                        <p className="text-gray-500 text-xs mt-1">
+                          Eng: {obra.engenheiro}
+                        </p>
+                      )}
+                    </div>
+                  );
+                })
               )}
             </div>
           </div>
