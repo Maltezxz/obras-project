@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
-import { Plus, Building2, Trash2, CheckCircle, XCircle, Calendar } from 'lucide-react';
+import { Plus, Building2, Trash2, CheckCircle, XCircle, Calendar, Edit } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../hooks/useAuth';
 import { useRefresh } from '../../contexts/RefreshContext';
@@ -13,6 +13,8 @@ export default function ObrasPage() {
   const [obras, setObras] = useState<Obra[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -45,7 +47,7 @@ export default function ObrasPage() {
       }
 
       const allObras = data || [];
-      const filteredObras = await getFilteredObras(user.id, user.role, user.host_id, allObras);
+      const filteredObras = await getFilteredObras(user.id, user.role, user.host_id || null, allObras);
 
       setObras(filteredObras);
       console.log('✅ Obras carregadas e filtradas do Supabase');
@@ -97,41 +99,81 @@ export default function ObrasPage() {
         start_date: formData.start_date,
         engenheiro: formData.engenheiro.trim(),
         status: formData.status,
-        owner_id: user.id,
-        image_url: imageBase64,
+        ...(imageBase64 && { image_url: imageBase64 }),
       };
 
-      console.log('Criando obra com dados:', obraData);
+      if (isEditing && editingId) {
+        // Atualizar obra existente
+        console.log('Atualizando obra com dados:', obraData);
 
-      const { data, error } = await supabase
-        .from('obras')
-        .insert(obraData)
-        .select()
-        .single();
+        const { data, error } = await supabase
+          .from('obras')
+          .update(obraData)
+          .eq('id', editingId)
+          .select()
+          .single();
 
-      if (error) {
-        console.error('Erro ao criar obra no Supabase:', error);
-        throw new Error(`Erro ao criar obra: ${error.message}`);
+        if (error) {
+          console.error('Erro ao atualizar obra no Supabase:', error);
+          throw new Error(`Erro ao atualizar obra: ${error.message}`);
+        }
+
+        console.log('✅ Obra atualizada no Supabase:', data);
+
+        await supabase.from('historico').insert({
+          tipo_evento: 'obra_atualizada',
+          descricao: `Obra "${data.title}" foi atualizada`,
+          obra_id: data.id,
+          user_id: user.id,
+          owner_id: user.id,
+          metadata: {
+            endereco: data.endereco,
+            engenheiro: data.engenheiro,
+          }
+        });
+
+        alert('Obra atualizada com sucesso!');
+      } else {
+        // Criar nova obra
+        const newObraData = {
+          ...obraData,
+          owner_id: user.id,
+        };
+
+        console.log('Criando obra com dados:', newObraData);
+
+        const { data, error } = await supabase
+          .from('obras')
+          .insert(newObraData)
+          .select()
+          .single();
+
+        if (error) {
+          console.error('Erro ao criar obra no Supabase:', error);
+          throw new Error(`Erro ao criar obra: ${error.message}`);
+        }
+
+        console.log('✅ Obra criada no Supabase:', data);
+
+        await supabase.from('historico').insert({
+          tipo_evento: 'obra_criada',
+          descricao: `Obra "${data.title}" foi criada`,
+          obra_id: data.id,
+          user_id: user.id,
+          owner_id: user.id,
+          metadata: {
+            endereco: data.endereco,
+            engenheiro: data.engenheiro,
+            start_date: data.start_date
+          }
+        });
+
+        alert('Obra criada com sucesso!');
       }
 
-      console.log('✅ Obra criada no Supabase:', data);
-
-      await supabase.from('historico').insert({
-        tipo_evento: 'obra_criada',
-        descricao: `Obra "${data.title}" foi criada`,
-        obra_id: data.id,
-        user_id: user.id,
-        owner_id: user.id,
-        metadata: {
-          endereco: data.endereco,
-          engenheiro: data.engenheiro,
-          start_date: data.start_date
-        }
-      });
-
-      alert('Obra criada com sucesso!');
-
       setShowModal(false);
+      setIsEditing(false);
+      setEditingId(null);
       setFormData({
         title: '',
         description: '',
@@ -141,12 +183,12 @@ export default function ObrasPage() {
         status: 'ativa' as 'ativa' | 'finalizada',
         image: null,
       });
-      
+
       await loadObras();
-      triggerRefresh(); // Dispara atualização global
+      triggerRefresh();
     } catch (error: unknown) {
-      console.error('Error creating obra:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido ao criar obra';
+      console.error('Error saving obra:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido ao salvar obra';
       alert(errorMessage);
     } finally {
       setLoading(false);
@@ -282,6 +324,27 @@ export default function ObrasPage() {
                 </div>
                 <div className="flex items-center space-x-2">
                   <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setIsEditing(true);
+                      setEditingId(obra.id);
+                      setFormData({
+                        title: obra.title,
+                        description: obra.description || '',
+                        endereco: obra.endereco,
+                        start_date: obra.start_date,
+                        engenheiro: obra.engenheiro || '',
+                        status: obra.status,
+                        image: null,
+                      });
+                      setShowModal(true);
+                    }}
+                    className="p-2 rounded-lg bg-blue-500/10 text-blue-400 hover:bg-blue-500/20 transition-all duration-200"
+                    title="Editar obra"
+                  >
+                    <Edit size={18} />
+                  </button>
+                  <button
                     onClick={() => toggleStatus(obra.id, obra.status)}
                     className={`p-2 rounded-lg transition-all duration-200 ${
                       obra.status === 'ativa'
@@ -372,15 +435,28 @@ export default function ObrasPage() {
                     </div>
                     <div>
                       <h2 className="text-xl font-bold text-white">
-                        Nova Obra
+                        {isEditing ? 'Editar Obra' : 'Nova Obra'}
                       </h2>
                       <p className="text-gray-400 text-sm">
-                        Cadastre uma nova obra
+                        {isEditing ? 'Atualize os dados da obra' : 'Cadastre uma nova obra'}
                       </p>
                     </div>
                   </div>
                   <button
-                    onClick={() => setShowModal(false)}
+                    onClick={() => {
+                      setShowModal(false);
+                      setIsEditing(false);
+                      setEditingId(null);
+                      setFormData({
+                        title: '',
+                        description: '',
+                        endereco: '',
+                        start_date: new Date().toISOString().split('T')[0],
+                        engenheiro: '',
+                        status: 'ativa' as 'ativa' | 'finalizada',
+                        image: null,
+                      });
+                    }}
                     className="p-2 rounded-lg bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white transition-all duration-200"
                   >
                     <XCircle className="w-4 h-4" />
@@ -475,7 +551,20 @@ export default function ObrasPage() {
                 <div className="flex space-x-3 pt-4">
                   <button
                     type="button"
-                    onClick={() => setShowModal(false)}
+                    onClick={() => {
+                      setShowModal(false);
+                      setIsEditing(false);
+                      setEditingId(null);
+                      setFormData({
+                        title: '',
+                        description: '',
+                        endereco: '',
+                        start_date: new Date().toISOString().split('T')[0],
+                        engenheiro: '',
+                        status: 'ativa' as 'ativa' | 'finalizada',
+                        image: null,
+                      });
+                    }}
                     className="flex-1 px-4 py-3 bg-white/5 border border-white/10 text-white rounded-xl hover:bg-white/10 transition-all duration-200 font-medium"
                   >
                     Cancelar
