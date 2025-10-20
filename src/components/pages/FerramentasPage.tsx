@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
-import { Plus, Wrench, Trash2, ArrowRight, Package, XCircle, Image as ImageIcon, Warehouse } from 'lucide-react';
+import { Plus, Wrench, Trash2, ArrowRight, Package, XCircle, Image as ImageIcon, Warehouse, Edit } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../hooks/useAuth';
 import { usePermissions } from '../../hooks/usePermissions';
@@ -519,37 +519,8 @@ export default function FerramentasPage() {
                 : 'bg-white/5 border-white/10 hover:bg-white/10'
             }`}
             onClick={() => {
-              if (isHost || canCreateFerramentas) {
-                // Preencher formulário com dados da ferramenta para edição
-                setIsEditing(true);
-                setEditingId(ferramenta.id);
-                setFormData({
-                  name: ferramenta.name || '',
-                  tipo: ferramenta.tipo || '',
-                  modelo: ferramenta.modelo || '',
-                  serial: ferramenta.serial || '',
-                  current_type: 'obra',
-                  current_id: ferramenta.current_id || '',
-                  descricao: ferramenta.descricao || '',
-                  nf: ferramenta.nf || '',
-                  nf_image: null,
-                  tool_image: null,
-                  data: ferramenta.data || '',
-                  valor: ferramenta.valor ? String(ferramenta.valor) : '',
-                  tempo_garantia_dias: ferramenta.tempo_garantia_dias ? String(ferramenta.tempo_garantia_dias) : '',
-                  garantia: ferramenta.garantia || '',
-                  marca: ferramenta.marca || '',
-                  numero_lacre: ferramenta.numero_lacre || '',
-                  numero_placa: ferramenta.numero_placa || '',
-                  adesivo: ferramenta.adesivo || '',
-                  usuario: ferramenta.usuario || '',
-                  obra: ferramenta.obra || '',
-                });
-                setShowModal(true);
-              } else {
-                setSelectedFerramenta(ferramenta);
-                setShowDetailsModal(true);
-              }
+              setSelectedFerramenta(ferramenta);
+              setShowDetailsModal(true);
             }}
           >
             <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent"></div>
@@ -576,6 +547,42 @@ export default function FerramentasPage() {
                   )}
                 </div>
                 <div className="flex items-center space-x-2">
+                  {(isHost || canCreateFerramentas) && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setIsEditing(true);
+                      setEditingId(ferramenta.id);
+                      setFormData({
+                        name: ferramenta.name || '',
+                        tipo: ferramenta.tipo || '',
+                        modelo: ferramenta.modelo || '',
+                        serial: ferramenta.serial || '',
+                        current_type: 'obra',
+                        current_id: ferramenta.current_id || '',
+                        descricao: ferramenta.descricao || '',
+                        nf: ferramenta.nf || '',
+                        nf_image: null,
+                        tool_image: null,
+                        data: ferramenta.data || '',
+                        valor: ferramenta.valor ? String(ferramenta.valor) : '',
+                        tempo_garantia_dias: ferramenta.tempo_garantia_dias ? String(ferramenta.tempo_garantia_dias) : '',
+                        garantia: ferramenta.garantia || '',
+                        marca: ferramenta.marca || '',
+                        numero_lacre: ferramenta.numero_lacre || '',
+                        numero_placa: ferramenta.numero_placa || '',
+                        adesivo: ferramenta.adesivo || '',
+                        usuario: ferramenta.usuario || '',
+                        obra: ferramenta.obra || '',
+                      });
+                      setShowModal(true);
+                    }}
+                    className="p-2 rounded-lg bg-blue-500/10 text-blue-400 hover:bg-blue-500/20 transition-all duration-200"
+                    title="Editar equipamento"
+                  >
+                    <Edit size={18} />
+                  </button>
+                  )}
                   {ferramenta.status !== 'desaparecida' && (
                     <button
                       onClick={(e) => {
