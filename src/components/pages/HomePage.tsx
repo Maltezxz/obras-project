@@ -4,7 +4,7 @@ import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../hooks/useAuth';
 import { useRefresh } from '../../contexts/RefreshContext';
 import { Obra, Ferramenta } from '../../types';
-import { getFilteredObras } from '../../utils/permissions';
+import { getFilteredObras, getFilteredFerramentas } from '../../utils/permissions';
 
 export default function HomePage() {
   const { user } = useAuth();
@@ -94,13 +94,16 @@ export default function HomePage() {
         throw ferramRes.error;
       }
 
-      setFerramentas(ferramRes.data || []);
-      console.log('✅ Ferramentas carregadas do Supabase na Home:', {
-        total: ferramRes.data?.length || 0,
-        disponiveis: ferramRes.data?.filter(f => f.status === 'disponivel').length || 0,
-        em_uso: ferramRes.data?.filter(f => f.status === 'em_uso').length || 0,
-        desaparecidas: ferramRes.data?.filter(f => f.status === 'desaparecida').length || 0,
-        status_list: ferramRes.data?.map(f => ({ name: f.name, status: f.status })) || []
+      const allFerramentas = ferramRes.data || [];
+      const filteredFerramentas = await getFilteredFerramentas(user.id, user.role, user.host_id || null, allFerramentas);
+
+      setFerramentas(filteredFerramentas);
+      console.log('✅ Ferramentas carregadas e filtradas do Supabase na Home:', {
+        total: allFerramentas.length,
+        permitidas: filteredFerramentas.length,
+        disponiveis: filteredFerramentas.filter(f => f.status === 'disponivel').length,
+        em_uso: filteredFerramentas.filter(f => f.status === 'em_uso').length,
+        desaparecidas: filteredFerramentas.filter(f => f.status === 'desaparecida').length
       });
 
       const historicoRes = await supabase

@@ -6,7 +6,7 @@ import { usePermissions } from '../../hooks/usePermissions';
 import { useRefresh } from '../../contexts/RefreshContext';
 import { Ferramenta, Obra } from '../../types';
 import { fileToBase64 } from '../../utils/fileUtils';
-import { getFilteredObras } from '../../utils/permissions';
+import { getFilteredObras, getFilteredFerramentas } from '../../utils/permissions';
 
 export default function FerramentasPage() {
   const { user } = useAuth();
@@ -73,8 +73,11 @@ export default function FerramentasPage() {
         throw ferramRes.error;
       }
 
-      setFerramentas(ferramRes.data || []);
-      console.log('✅ Ferramentas carregadas do Supabase');
+      const allFerramentas = ferramRes.data || [];
+      const filteredFerramentas = await getFilteredFerramentas(user.id, user.role, user.host_id || null, allFerramentas);
+
+      setFerramentas(filteredFerramentas);
+      console.log('✅ Ferramentas carregadas e filtradas do Supabase:', filteredFerramentas.length, 'ferramentas');
 
       const obrasRes = await supabase
         .from('obras')
