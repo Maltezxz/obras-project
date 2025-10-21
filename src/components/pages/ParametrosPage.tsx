@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Settings, User, Mail, Building2, Shield, Users, ChevronRight, X, Save } from 'lucide-react';
+import { Settings, User, Mail, Building2, Shield, Users, ChevronRight, X, Save, Wrench } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { supabase } from '../../lib/supabase';
 import { Obra } from '../../types';
@@ -12,20 +12,40 @@ interface UserWithPermissions {
   created_at: string;
 }
 
-interface Permission {
+interface ObraPermission {
   id: string;
   user_id: string;
   obra_id: string;
   host_id: string;
 }
 
+interface FerramentaPermission {
+  id: string;
+  user_id: string;
+  ferramenta_id: string;
+  host_id: string;
+}
+
+interface Ferramenta {
+  id: string;
+  name: string;
+  tipo: string;
+  modelo?: string;
+  serial?: string;
+  status: string;
+}
+
 export default function ParametrosPage() {
   const { user } = useAuth();
   const [users, setUsers] = useState<UserWithPermissions[]>([]);
   const [obras, setObras] = useState<Obra[]>([]);
-  const [permissions, setPermissions] = useState<Permission[]>([]);
+  const [ferramentas, setFerramentas] = useState<Ferramenta[]>([]);
+  const [obraPermissions, setObraPermissions] = useState<ObraPermission[]>([]);
+  const [ferramentaPermissions, setFerramentaPermissions] = useState<FerramentaPermission[]>([]);
   const [selectedUser, setSelectedUser] = useState<UserWithPermissions | null>(null);
   const [selectedObras, setSelectedObras] = useState<Set<string>>(new Set());
+  const [selectedFerramentas, setSelectedFerramentas] = useState<Set<string>>(new Set());
+  const [activeTab, setActiveTab] = useState<'obras' | 'ferramentas'>('obras');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
@@ -36,7 +56,7 @@ export default function ParametrosPage() {
     }
 
     try {
-      const [usersResult, obrasResult, permissionsResult] = await Promise.all([
+      const [usersResult, obrasResult, ferramentasResult, obraPermissionsResult, ferramentaPermissionsResult] = await Promise.all([
         supabase
           .from('users')
           .select('id, name, email, role, created_at')
@@ -48,14 +68,25 @@ export default function ParametrosPage() {
           .eq('owner_id', user.id)
           .order('title', { ascending: true }),
         supabase
+          .from('ferramentas')
+          .select('id, name, tipo, modelo, serial, status')
+          .eq('owner_id', user.id)
+          .order('name', { ascending: true }),
+        supabase
           .from('user_obra_permissions')
+          .select('*')
+          .eq('host_id', user.id),
+        supabase
+          .from('user_ferramenta_permissions')
           .select('*')
           .eq('host_id', user.id)
       ]);
 
       if (usersResult.data) setUsers(usersResult.data);
       if (obrasResult.data) setObras(obrasResult.data);
-      if (permissionsResult.data) setPermissions(permissionsResult.data);
+      if (ferramentasResult.data) setFerramentas(ferramentasResult.data);
+      if (obraPermissionsResult.data) setObraPermissions(obraPermissionsResult.data);
+      if (ferramentaPermissionsResult.data) setFerramentaPermissions(ferramentaPermissionsResult.data);
     } catch (error) {
       console.error('Erro ao carregar dados:', error);
     } finally {
@@ -69,15 +100,26 @@ export default function ParametrosPage() {
 
   const handleUserSelect = (selectedUser: UserWithPermissions) => {
     setSelectedUser(selectedUser);
+    setActiveTab('obras');
 
-    const userPermissions = permissions
+    const userObraPermissions = obraPermissions
       .filter(p => p.user_id === selectedUser.id)
       .map(p => p.obra_id);
 
-    if (userPermissions.length === 0) {
+    if (userObraPermissions.length === 0) {
       setSelectedObras(new Set(obras.map(o => o.id)));
     } else {
-      setSelectedObras(new Set(userPermissions));
+      setSelectedObras(new Set(userObraPermissions));
+    }
+
+    const userFerramentaPermissions = ferramentaPermissions
+      .filter(p => p.user_id === selectedUser.id)
+      .map(p => p.ferramenta_id);
+
+    if (userFerramentaPermissions.length === 0) {
+      setSelectedFerramentas(new Set(ferramentas.map(f => f.id)));
+    } else {
+      setSelectedFerramentas(new Set(userFerramentaPermissions));
     }
   };
 
@@ -93,6 +135,34 @@ export default function ParametrosPage() {
     });
   };
 
+  const toggleFerramentaPermission = (ferramentaId: string) => {
+    setSelectedFerramentas(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(ferramentaId)) {
+        newSet.delete(ferramentaId);
+      } else {
+        newSet.add(ferramentaId);
+      }
+      return newSet;
+    });
+  };
+
+  const selectAllObras = () => {
+    setSelectedObras(new Set(obras.map(o => o.id)));
+  };
+
+  const deselectAllObras = () => {
+    setSelectedObras(new Set());
+  };
+
+  const selectAllFerramentas = () => {
+    setSelectedFerramentas(new Set(ferramentas.map(f => f.id)));
+  };
+
+  const deselectAllFerramentas = () => {
+    setSelectedFerramentas(new Set());
+  };
+
   const handleSavePermissions = async () => {
     if (!selectedUser || !user?.id) return;
 
@@ -101,31 +171,45 @@ export default function ParametrosPage() {
       console.log('=== INICIANDO SALVAMENTO DE PERMISSÕES ===');
       console.log('Usuário selecionado:', selectedUser.id);
       console.log('Host logado:', user.id);
-      console.log('Role do host:', user.role);
       console.log('Obras selecionadas:', Array.from(selectedObras));
+      console.log('Ferramentas selecionadas:', Array.from(selectedFerramentas));
 
       const obraIds = Array.from(selectedObras);
+      const ferramentaIds = Array.from(selectedFerramentas);
 
-      const { data, error } = await supabase.rpc('manage_user_obra_permissions', {
-        p_host_id: user.id,
-        p_user_id: selectedUser.id,
-        p_obra_ids: obraIds.length > 0 ? obraIds : []
-      });
+      const [obraResult, ferramentaResult] = await Promise.all([
+        supabase.rpc('manage_user_obra_permissions', {
+          p_host_id: user.id,
+          p_user_id: selectedUser.id,
+          p_obra_ids: obraIds.length > 0 ? obraIds : []
+        }),
+        supabase.rpc('manage_user_ferramenta_permissions', {
+          p_host_id: user.id,
+          p_user_id: selectedUser.id,
+          p_ferramenta_ids: ferramentaIds.length > 0 ? ferramentaIds : []
+        })
+      ]);
 
-      console.log('Resultado da função:', data);
-
-      if (error) {
-        console.error('Erro ao chamar função:', error);
-        throw new Error(`Erro ao salvar permissões: ${error.message}`);
+      if (obraResult.error) {
+        console.error('Erro ao salvar permissões de obras:', obraResult.error);
+        throw new Error(`Erro ao salvar permissões de obras: ${obraResult.error.message}`);
       }
 
-      if (data && !data.success) {
-        console.error('Função retornou erro:', data.error);
-        throw new Error(data.error || 'Erro desconhecido ao salvar permissões');
+      if (ferramentaResult.error) {
+        console.error('Erro ao salvar permissões de ferramentas:', ferramentaResult.error);
+        throw new Error(`Erro ao salvar permissões de ferramentas: ${ferramentaResult.error.message}`);
       }
 
-      console.log('✓ Permissões salvas com sucesso:', data);
-      alert(`Permissões atualizadas com sucesso! ${data.permissions_count} obra(s) permitida(s).`);
+      if (obraResult.data && !obraResult.data.success) {
+        throw new Error(obraResult.data.error || 'Erro ao salvar permissões de obras');
+      }
+
+      if (ferramentaResult.data && !ferramentaResult.data.success) {
+        throw new Error(ferramentaResult.data.error || 'Erro ao salvar permissões de ferramentas');
+      }
+
+      console.log('✓ Permissões salvas com sucesso');
+      alert(`Permissões atualizadas com sucesso!\n${obraResult.data.permissions_count} obra(s) e ${ferramentaResult.data.permissions_count} ferramenta(s) permitidas.`);
       await loadData();
       setSelectedUser(null);
     } catch (error: unknown) {
@@ -327,8 +411,10 @@ export default function ParametrosPage() {
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                   {users.map((u) => {
-                    const userPermissions = permissions.filter(p => p.user_id === u.id);
-                    const permissionCount = userPermissions.length || obras.length;
+                    const userObraPerms = obraPermissions.filter(p => p.user_id === u.id);
+                    const userFerramentaPerms = ferramentaPermissions.filter(p => p.user_id === u.id);
+                    const obraCount = userObraPerms.length || obras.length;
+                    const ferramentaCount = userFerramentaPerms.length || ferramentas.length;
 
                     return (
                       <button
@@ -350,10 +436,17 @@ export default function ParametrosPage() {
                           </div>
                           <ChevronRight className="w-5 h-5 text-gray-600 group-hover:text-blue-400 transition-colors" />
                         </div>
-                        <div className="flex items-center justify-between text-xs">
-                          <span className="text-gray-400">
-                            Acesso a {permissionCount} de {obras.length} obras
-                          </span>
+                        <div className="space-y-1 text-xs">
+                          <div className="flex items-center justify-between">
+                            <span className="text-gray-400">
+                              Obras: {obraCount} de {obras.length}
+                            </span>
+                          </div>
+                          <div className="flex items-center justify-between">
+                            <span className="text-gray-400">
+                              Ferramentas: {ferramentaCount} de {ferramentas.length}
+                            </span>
+                          </div>
                         </div>
                       </button>
                     );
@@ -391,47 +484,142 @@ export default function ParametrosPage() {
                 </div>
               </div>
 
-              <div className="p-6 max-h-[60vh] overflow-y-auto">
-                <h3 className="text-lg font-semibold text-white mb-4">
-                  Selecione as obras que {selectedUser.name} pode acessar:
-                </h3>
+              {/* Tabs */}
+              <div className="flex border-b border-white/10 bg-white/5">
+                <button
+                  onClick={() => setActiveTab('obras')}
+                  className={`flex-1 px-6 py-4 font-medium transition-all duration-200 ${
+                    activeTab === 'obras'
+                      ? 'text-blue-400 border-b-2 border-blue-400 bg-blue-500/10'
+                      : 'text-gray-400 hover:text-white hover:bg-white/5'
+                  }`}
+                >
+                  <div className="flex items-center justify-center space-x-2">
+                    <Building2 className="w-4 h-4" />
+                    <span>Obras</span>
+                    <span className="px-2 py-0.5 rounded-full bg-white/10 text-xs">
+                      {selectedObras.size}/{obras.length}
+                    </span>
+                  </div>
+                </button>
+                <button
+                  onClick={() => setActiveTab('ferramentas')}
+                  className={`flex-1 px-6 py-4 font-medium transition-all duration-200 ${
+                    activeTab === 'ferramentas'
+                      ? 'text-blue-400 border-b-2 border-blue-400 bg-blue-500/10'
+                      : 'text-gray-400 hover:text-white hover:bg-white/5'
+                  }`}
+                >
+                  <div className="flex items-center justify-center space-x-2">
+                    <Wrench className="w-4 h-4" />
+                    <span>Ferramentas</span>
+                    <span className="px-2 py-0.5 rounded-full bg-white/10 text-xs">
+                      {selectedFerramentas.size}/{ferramentas.length}
+                    </span>
+                  </div>
+                </button>
+              </div>
 
-                {obras.length === 0 ? (
-                  <div className="text-center py-8">
-                    <Building2 className="w-12 h-12 text-gray-600 mx-auto mb-3" />
-                    <p className="text-gray-400 text-sm">
-                      Nenhuma obra cadastrada
-                    </p>
+              <div className="p-6">
+                {/* Action Buttons */}
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-semibold text-white">
+                    {activeTab === 'obras' ? 'Permissões de Obras' : 'Permissões de Ferramentas'}
+                  </h3>
+                  <div className="flex space-x-2">
+                    <button
+                      onClick={activeTab === 'obras' ? selectAllObras : selectAllFerramentas}
+                      className="px-3 py-1.5 text-xs font-medium text-green-400 bg-green-500/10 rounded-lg hover:bg-green-500/20 transition-all duration-200"
+                    >
+                      Selecionar Todas
+                    </button>
+                    <button
+                      onClick={activeTab === 'obras' ? deselectAllObras : deselectAllFerramentas}
+                      className="px-3 py-1.5 text-xs font-medium text-red-400 bg-red-500/10 rounded-lg hover:bg-red-500/20 transition-all duration-200"
+                    >
+                      Remover Todas
+                    </button>
                   </div>
-                ) : (
-                  <div className="space-y-3">
-                    {obras.map((obra) => (
-                      <label
-                        key={obra.id}
-                        className="flex items-start space-x-3 p-4 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 cursor-pointer transition-all duration-200"
-                      >
-                        <input
-                          type="checkbox"
-                          checked={selectedObras.has(obra.id)}
-                          onChange={() => toggleObraPermission(obra.id)}
-                          className="mt-1 w-4 h-4 rounded border-white/20 bg-white/10 text-blue-500 focus:ring-2 focus:ring-blue-500/50"
-                        />
-                        <div className="flex-1">
-                          <div className="flex items-center space-x-2 mb-1">
-                            <Building2 className="w-4 h-4 text-blue-400" />
-                            <h4 className="text-white font-medium">{obra.title}</h4>
-                          </div>
-                          <p className="text-sm text-gray-400">{obra.endereco}</p>
-                          {obra.engenheiro && (
-                            <p className="text-xs text-gray-500 mt-1">
-                              Eng: {obra.engenheiro}
-                            </p>
-                          )}
-                        </div>
-                      </label>
-                    ))}
-                  </div>
-                )}
+                </div>
+
+                <div className="max-h-[50vh] overflow-y-auto">
+                  {activeTab === 'obras' ? (
+                    obras.length === 0 ? (
+                      <div className="text-center py-8">
+                        <Building2 className="w-12 h-12 text-gray-600 mx-auto mb-3" />
+                        <p className="text-gray-400 text-sm">
+                          Nenhuma obra cadastrada
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="space-y-3">
+                        {obras.map((obra) => (
+                          <label
+                            key={obra.id}
+                            className="flex items-start space-x-3 p-4 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 cursor-pointer transition-all duration-200"
+                          >
+                            <input
+                              type="checkbox"
+                              checked={selectedObras.has(obra.id)}
+                              onChange={() => toggleObraPermission(obra.id)}
+                              className="mt-1 w-4 h-4 rounded border-white/20 bg-white/10 text-blue-500 focus:ring-2 focus:ring-blue-500/50"
+                            />
+                            <div className="flex-1">
+                              <div className="flex items-center space-x-2 mb-1">
+                                <Building2 className="w-4 h-4 text-blue-400" />
+                                <h4 className="text-white font-medium">{obra.title}</h4>
+                              </div>
+                              <p className="text-sm text-gray-400">{obra.endereco}</p>
+                              {obra.engenheiro && (
+                                <p className="text-xs text-gray-500 mt-1">
+                                  Eng: {obra.engenheiro}
+                                </p>
+                              )}
+                            </div>
+                          </label>
+                        ))}
+                      </div>
+                    )
+                  ) : (
+                    ferramentas.length === 0 ? (
+                      <div className="text-center py-8">
+                        <Wrench className="w-12 h-12 text-gray-600 mx-auto mb-3" />
+                        <p className="text-gray-400 text-sm">
+                          Nenhuma ferramenta cadastrada
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="space-y-3">
+                        {ferramentas.map((ferramenta) => (
+                          <label
+                            key={ferramenta.id}
+                            className="flex items-start space-x-3 p-4 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 cursor-pointer transition-all duration-200"
+                          >
+                            <input
+                              type="checkbox"
+                              checked={selectedFerramentas.has(ferramenta.id)}
+                              onChange={() => toggleFerramentaPermission(ferramenta.id)}
+                              className="mt-1 w-4 h-4 rounded border-white/20 bg-white/10 text-blue-500 focus:ring-2 focus:ring-blue-500/50"
+                            />
+                            <div className="flex-1">
+                              <div className="flex items-center space-x-2 mb-1">
+                                <Wrench className="w-4 h-4 text-purple-400" />
+                                <h4 className="text-white font-medium">{ferramenta.name}</h4>
+                              </div>
+                              {ferramenta.tipo && (
+                                <p className="text-sm text-gray-400">Tipo: {ferramenta.tipo}</p>
+                              )}
+                              <div className="flex items-center space-x-3 text-xs text-gray-500 mt-1">
+                                {ferramenta.modelo && <span>Modelo: {ferramenta.modelo}</span>}
+                                {ferramenta.serial && <span>Serial: {ferramenta.serial}</span>}
+                              </div>
+                            </div>
+                          </label>
+                        ))}
+                      </div>
+                    )
+                  )}
+                </div>
               </div>
 
               <div className="p-6 border-t border-white/10 bg-white/5">
