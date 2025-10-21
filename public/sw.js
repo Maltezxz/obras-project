@@ -1,10 +1,12 @@
 // Service Worker for Prática Engenharia PWA
-const CACHE_NAME = 'pratica-eng-v2';
+const CACHE_NAME = 'pratica-eng-v3';
 const urlsToCache = [
   '/',
   '/index.html',
   '/manifest.json',
-  '/icon.svg'
+  '/icon.svg',
+  '/icon-192.svg',
+  '/icon-512.svg'
 ];
 
 // Install event - cache resources

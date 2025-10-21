@@ -17,7 +17,7 @@
     <path d="M 70,0 L 140,80 L 0,80 Z" fill="#5499C7" />
   </g>
 
-  <!-- Letra P estilizada (representando Prática) -->
+  <!-- Letra P estilizada -->
   <text x="256" y="400" font-family="Arial, sans-serif" font-size="90" font-weight="bold" fill="white" text-anchor="middle">P</text>
 
   <!-- Decoração sutil -->
