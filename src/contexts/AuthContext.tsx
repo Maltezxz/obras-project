@@ -1,6 +1,7 @@
 import React, { createContext, useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { User, AuthContextType } from '../types';
+import { PROTECTED_HOST } from '../constants/auth';
 
 export const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
@@ -186,13 +187,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       throw new Error('Apenas hosts podem remover funcionários');
     }
 
+    // Verificar se está tentando remover o Fernando Antunes (Host protegido)
+    if (employeeId === PROTECTED_HOST.id) {
+      throw new Error(`${PROTECTED_HOST.name} não pode ser removido. Este é o host principal do sistema.`);
+    }
+
     try {
       // As credenciais serão removidas automaticamente por CASCADE
       const { error } = await supabase
         .from('users')
         .delete()
-        .eq('id', employeeId)
-        .eq('host_id', user.id);
+        .eq('id', employeeId);
 
       if (error) {
         console.error('Erro ao remover funcionário:', error);
@@ -272,6 +277,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const isProtectedUser = (userId: string): boolean => {
+    return userId === PROTECTED_HOST.id;
+  };
+
   return (
     <AuthContext.Provider value={{
       user,
@@ -282,7 +291,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       addEmployee,
       removeEmployee,
       getEmployees,
-      getCompanyHostIds
+      getCompanyHostIds,
+      isProtectedUser
     }}>
       {children}
     </AuthContext.Provider>

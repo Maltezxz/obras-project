@@ -97,4 +97,5 @@ export interface AuthContextType {
   removeEmployee?: (employeeId: string) => Promise<void>;
   getEmployees?: () => Promise<User[]>;
   getCompanyHostIds?: () => Promise<string[]>;
+  isProtectedUser?: (userId: string) => boolean;
 }

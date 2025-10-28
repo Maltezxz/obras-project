@@ -1,10 +1,10 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { Plus, Users, Trash2, Mail, Crown, User as UserIcon } from 'lucide-react';
+import { Plus, Users, Trash2, Mail, Crown, User as UserIcon, Shield } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { User } from '../../types';
 
 export default function UsuariosPage() {
-  const { user, addEmployee, removeEmployee, getEmployees } = useAuth();
+  const { user, addEmployee, removeEmployee, getEmployees, isProtectedUser } = useAuth();
   const [funcionarios, setFuncionarios] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
@@ -179,12 +179,19 @@ export default function UsuariosPage() {
                     <Users className="w-6 h-6 text-white" />
                   )}
                 </div>
-                <button
-                  onClick={() => handleDelete(funcionario.id)}
-                  className="p-2 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-all duration-200"
-                >
-                  <Trash2 size={18} />
-                </button>
+                {isProtectedUser?.(funcionario.id) ? (
+                  <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">
+                    <Shield size={16} />
+                    <span className="text-xs font-semibold">Protegido</span>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => handleDelete(funcionario.id)}
+                    className="p-2 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-all duration-200"
+                  >
+                    <Trash2 size={18} />
+                  </button>
+                )}
               </div>
               <div className="flex items-center gap-2 mb-2">
                 <h3 className="text-lg font-semibold text-white">

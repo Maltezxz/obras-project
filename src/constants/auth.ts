@@ -7,6 +7,13 @@ export const HOST_FAKE = {
   password: '123456',
 };
 
+// Host principal protegido (não pode ser removido)
+export const PROTECTED_HOST = {
+  id: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
+  name: 'Fernando Antunes',
+  email: 'fernando@praticaengenharia.com.br',
+};
+
 // Funcionários cadastrados pelo host (simulação local)
 export const EMPLOYEES_FAKE: User[] = [
   {
