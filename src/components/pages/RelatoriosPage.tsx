@@ -10,7 +10,7 @@ interface MovimentacaoWithDetails extends Movimentacao {
 }
 
 export default function RelatoriosPage() {
-  const { user } = useAuth();
+  const { user, getCompanyHostIds } = useAuth();
   const [movimentacoes, setMovimentacoes] = useState<MovimentacaoWithDetails[]>([]);
   const [ferramentas, setFerramentas] = useState<Ferramenta[]>([]);
   const [usuarios, setUsuarios] = useState<UserType[]>([]);
@@ -27,16 +27,19 @@ export default function RelatoriosPage() {
 
   const loadData = useCallback(async () => {
     try {
+      // Buscar IDs de todos os Hosts com mesmo CNPJ
+      const hostIds = await getCompanyHostIds?.() || [user?.id].filter(Boolean);
+
       const [movRes, ferramRes, usersRes, obrasRes, estabRes] = await Promise.all([
         supabase
           .from('movimentacoes')
           .select('*')
           .order('created_at', { ascending: false })
           .limit(100),
-        supabase.from('ferramentas').select('*').eq('owner_id', user?.id),
+        supabase.from('ferramentas').select('*').in('owner_id', hostIds),
         supabase.from('users').select('*'),
-        supabase.from('obras').select('*').eq('owner_id', user?.id),
-        supabase.from('estabelecimentos').select('*').eq('owner_id', user?.id),
+        supabase.from('obras').select('*').in('owner_id', hostIds),
+        supabase.from('estabelecimentos').select('*').in('owner_id', hostIds),
       ]);
 
       if (movRes.data) {
@@ -57,7 +60,7 @@ export default function RelatoriosPage() {
     } finally {
       setLoading(false);
     }
-  }, [user]);
+  }, [user, getCompanyHostIds]);
 
   useEffect(() => {
     loadData();
