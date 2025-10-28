@@ -96,4 +96,5 @@ export interface AuthContextType {
   addEmployee?: (employeeData: Omit<User, 'id' | 'created_at' | 'updated_at' | 'host_id' | 'cnpj'>, password: string) => Promise<User>;
   removeEmployee?: (employeeId: string) => Promise<void>;
   getEmployees?: () => Promise<User[]>;
+  getCompanyHostIds?: () => Promise<string[]>;
 }

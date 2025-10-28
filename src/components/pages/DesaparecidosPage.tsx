@@ -5,7 +5,7 @@ import { useAuth } from '../../hooks/useAuth';
 import { Ferramenta, Obra, Estabelecimento } from '../../types';
 
 export default function DesaparecidosPage() {
-  const { user } = useAuth();
+  const { user, getCompanyHostIds } = useAuth();
   const [ferramentas, setFerramentas] = useState<Ferramenta[]>([]);
   const [obras, setObras] = useState<Obra[]>([]);
   const [estabelecimentos, setEstabelecimentos] = useState<Estabelecimento[]>([]);
@@ -13,17 +13,31 @@ export default function DesaparecidosPage() {
 
   const loadData = useCallback(async () => {
     try {
-      const ownerId = user?.role === 'host' ? user.id : user?.host_id;
+      let ownerIds: string[] = [];
+
+      if (user?.role === 'host') {
+        ownerIds = await getCompanyHostIds?.() || [user.id];
+      } else {
+        ownerIds = user?.host_id ? [user.host_id] : [];
+      }
+
+      if (ownerIds.length === 0) {
+        setFerramentas([]);
+        setObras([]);
+        setEstabelecimentos([]);
+        setLoading(false);
+        return;
+      }
 
       const [ferramRes, obrasRes, estabRes] = await Promise.all([
         supabase
           .from('ferramentas')
           .select('*')
-          .eq('owner_id', ownerId)
+          .in('owner_id', ownerIds)
           .eq('status', 'desaparecida')
           .order('updated_at', { ascending: false }),
-        supabase.from('obras').select('*').eq('owner_id', ownerId),
-        supabase.from('estabelecimentos').select('*').eq('owner_id', ownerId),
+        supabase.from('obras').select('*').in('owner_id', ownerIds),
+        supabase.from('estabelecimentos').select('*').in('owner_id', ownerIds),
       ]);
 
       if (ferramRes.data) setFerramentas(ferramRes.data);

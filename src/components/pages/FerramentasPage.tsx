@@ -9,7 +9,7 @@ import { fileToBase64 } from '../../utils/fileUtils';
 import { getFilteredObras, getFilteredFerramentas } from '../../utils/permissions';
 
 export default function FerramentasPage() {
-  const { user } = useAuth();
+  const { user, getCompanyHostIds } = useAuth();
   const { isHost, canCreateFerramentas, canDeleteFerramentas, canTransferFerramentas, canMarkDesaparecida } = usePermissions();
   const { triggerRefresh } = useRefresh();
   const [ferramentas, setFerramentas] = useState<Ferramenta[]>([]);
@@ -59,12 +59,25 @@ export default function FerramentasPage() {
         return;
       }
 
-      const ownerId = user?.role === 'host' ? user.id : user?.host_id;
+      let ownerIds: string[] = [];
+
+      if (user.role === 'host') {
+        ownerIds = await getCompanyHostIds?.() || [user.id];
+      } else {
+        ownerIds = user.host_id ? [user.host_id] : [];
+      }
+
+      if (ownerIds.length === 0) {
+        setFerramentas([]);
+        setObras([]);
+        setLoading(false);
+        return;
+      }
 
       const ferramRes = await supabase
         .from('ferramentas')
         .select('*')
-        .eq('owner_id', ownerId)
+        .in('owner_id', ownerIds)
         .order('created_at', { ascending: false });
 
       if (ferramRes.error) {
@@ -81,7 +94,7 @@ export default function FerramentasPage() {
       const obrasRes = await supabase
         .from('obras')
         .select('*')
-        .eq('owner_id', ownerId)
+        .in('owner_id', ownerIds)
         .eq('status', 'ativa');
 
       if (obrasRes.error) {

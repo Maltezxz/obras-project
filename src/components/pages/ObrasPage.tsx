@@ -8,7 +8,7 @@ import { fileToBase64 } from '../../utils/fileUtils';
 import { getFilteredObras } from '../../utils/permissions';
 
 export default function ObrasPage() {
-  const { user } = useAuth();
+  const { user, getCompanyHostIds } = useAuth();
   const { triggerRefresh } = useRefresh();
   const [obras, setObras] = useState<Obra[]>([]);
   const [loading, setLoading] = useState(true);
@@ -33,12 +33,26 @@ export default function ObrasPage() {
         return;
       }
 
-      const ownerId = user.role === 'host' ? user.id : user.host_id;
+      let ownerIds: string[] = [];
+
+      if (user.role === 'host') {
+        // Host: buscar IDs de todos os hosts com mesmo CNPJ
+        ownerIds = await getCompanyHostIds?.() || [user.id];
+      } else {
+        // Funcionário: buscar apenas do host dele
+        ownerIds = user.host_id ? [user.host_id] : [];
+      }
+
+      if (ownerIds.length === 0) {
+        setObras([]);
+        setLoading(false);
+        return;
+      }
 
       const { data, error } = await supabase
         .from('obras')
         .select('*')
-        .eq('owner_id', ownerId)
+        .in('owner_id', ownerIds)
         .order('created_at', { ascending: false });
 
       if (error) {

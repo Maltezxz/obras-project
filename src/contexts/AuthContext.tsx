@@ -245,6 +245,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const getCompanyHostIds = async (): Promise<string[]> => {
+    if (!user || user.role !== 'host') {
+      return [];
+    }
+
+    try {
+      const { data: hosts, error } = await supabase
+        .from('users')
+        .select('id')
+        .eq('role', 'host')
+        .eq('cnpj', user.cnpj);
+
+      if (error) {
+        console.error('Erro ao buscar IDs dos hosts:', error);
+        return [user.id];
+      }
+
+      return hosts?.map(h => h.id) || [user.id];
+    } catch (error) {
+      console.error('Erro ao buscar IDs dos hosts:', error);
+      return [user.id];
+    }
+  };
+
   return (
     <AuthContext.Provider value={{
       user,
@@ -254,7 +278,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       signOut,
       addEmployee,
       removeEmployee,
-      getEmployees
+      getEmployees,
+      getCompanyHostIds
     }}>
       {children}
     </AuthContext.Provider>

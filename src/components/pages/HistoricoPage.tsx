@@ -39,7 +39,7 @@ interface HistoricoEntry {
 }
 
 export default function HistoricoPage() {
-  const { user } = useAuth();
+  const { user, getCompanyHostIds } = useAuth();
   const { refreshTrigger } = useRefresh();
   const [obras, setObras] = useState<HistoricoObra[]>([]);
   const [movimentacoes, setMovimentacoes] = useState<HistoricoMovimentacao[]>([]);
@@ -62,7 +62,21 @@ export default function HistoricoPage() {
         return;
       }
 
-      const ownerId = user.role === 'host' ? user.id : user.host_id;
+      let ownerIds: string[] = [];
+
+      if (user.role === 'host') {
+        ownerIds = await getCompanyHostIds?.() || [user.id];
+      } else {
+        ownerIds = user.host_id ? [user.host_id] : [];
+      }
+
+      if (ownerIds.length === 0) {
+        setObras([]);
+        setMovimentacoes([]);
+        setHistorico([]);
+        setLoading(false);
+        return;
+      }
 
       // Carregar histórico completo
       try {
@@ -73,7 +87,7 @@ export default function HistoricoPage() {
             obra:obras(*),
             movimentacao:movimentacoes(*)
           `)
-          .eq('owner_id', ownerId)
+          .in('owner_id', ownerIds)
           .order('created_at', { ascending: false });
 
         if (historicoError) {

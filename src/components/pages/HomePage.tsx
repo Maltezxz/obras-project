@@ -7,7 +7,7 @@ import { Obra, Ferramenta } from '../../types';
 import { getFilteredObras, getFilteredFerramentas } from '../../utils/permissions';
 
 export default function HomePage() {
-  const { user } = useAuth();
+  const { user, getCompanyHostIds } = useAuth();
   const { refreshTrigger } = useRefresh();
   const [obras, setObras] = useState<Obra[]>([]);
   const [ferramentas, setFerramentas] = useState<Ferramenta[]>([]);
@@ -61,12 +61,25 @@ export default function HomePage() {
         return;
       }
 
-      const ownerId = user?.role === 'host' ? user.id : user?.host_id;
+      let ownerIds: string[] = [];
+
+      if (user.role === 'host') {
+        ownerIds = await getCompanyHostIds?.() || [user.id];
+      } else {
+        ownerIds = user.host_id ? [user.host_id] : [];
+      }
+
+      if (ownerIds.length === 0) {
+        setObras([]);
+        setFerramentas([]);
+        setLoading(false);
+        return;
+      }
 
       const obrasRes = await supabase
         .from('obras')
         .select('*')
-        .eq('owner_id', ownerId)
+        .in('owner_id', ownerIds)
         .eq('status', 'ativa')
         .order('created_at', { ascending: false });
 
@@ -87,7 +100,7 @@ export default function HomePage() {
       const ferramRes = await supabase
         .from('ferramentas')
         .select('*')
-        .eq('owner_id', ownerId);
+        .in('owner_id', ownerIds);
 
       if (ferramRes.error) {
         console.error('Erro ao carregar ferramentas do Supabase:', ferramRes.error);
@@ -109,7 +122,7 @@ export default function HomePage() {
       const historicoRes = await supabase
         .from('historico')
         .select('*')
-        .eq('owner_id', ownerId)
+        .in('owner_id', ownerIds)
         .order('created_at', { ascending: false })
         .limit(5);
 
