@@ -36,7 +36,7 @@ interface Ferramenta {
 }
 
 export default function ParametrosPage() {
-  const { user } = useAuth();
+  const { user, getCompanyHostIds } = useAuth();
   const [users, setUsers] = useState<UserWithPermissions[]>([]);
   const [obras, setObras] = useState<Obra[]>([]);
   const [ferramentas, setFerramentas] = useState<Ferramenta[]>([]);
@@ -56,30 +56,33 @@ export default function ParametrosPage() {
     }
 
     try {
+      // Buscar IDs de todos os Hosts com mesmo CNPJ
+      const hostIds = await getCompanyHostIds?.() || [user.id];
+
       const [usersResult, obrasResult, ferramentasResult, obraPermissionsResult, ferramentaPermissionsResult] = await Promise.all([
         supabase
           .from('users')
           .select('id, name, email, role, created_at')
-          .eq('host_id', user.id)
+          .in('host_id', hostIds)
           .order('created_at', { ascending: false }),
         supabase
           .from('obras')
           .select('*')
-          .eq('owner_id', user.id)
+          .in('owner_id', hostIds)
           .order('title', { ascending: true }),
         supabase
           .from('ferramentas')
           .select('id, name, tipo, modelo, serial, status')
-          .eq('owner_id', user.id)
+          .in('owner_id', hostIds)
           .order('name', { ascending: true }),
         supabase
           .from('user_obra_permissions')
           .select('*')
-          .eq('host_id', user.id),
+          .in('host_id', hostIds),
         supabase
           .from('user_ferramenta_permissions')
           .select('*')
-          .eq('host_id', user.id)
+          .in('host_id', hostIds)
       ]);
 
       if (usersResult.data) setUsers(usersResult.data);
@@ -92,7 +95,7 @@ export default function ParametrosPage() {
     } finally {
       setLoading(false);
     }
-  }, [user]);
+  }, [user, getCompanyHostIds]);
 
   useEffect(() => {
     loadData();
