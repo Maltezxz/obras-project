@@ -212,19 +212,33 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
 
     try {
-      const { data, error } = await supabase
+      // Buscar funcionários criados por este host
+      const { data: funcionarios, error: funcError } = await supabase
         .from('users')
         .select('*')
         .eq('role', 'funcionario')
         .eq('host_id', user.id)
         .order('name');
 
-      if (error) {
-        console.error('Erro ao buscar funcionários:', error);
-        return [];
+      if (funcError) {
+        console.error('Erro ao buscar funcionários:', funcError);
       }
 
-      return data || [];
+      // Buscar outros hosts criados por este host (mesmo CNPJ)
+      const { data: hosts, error: hostError } = await supabase
+        .from('users')
+        .select('*')
+        .eq('role', 'host')
+        .eq('cnpj', user.cnpj)
+        .neq('id', user.id) // Excluir o próprio usuário
+        .order('name');
+
+      if (hostError) {
+        console.error('Erro ao buscar hosts:', hostError);
+      }
+
+      // Combinar funcionários e hosts
+      return [...(funcionarios || []), ...(hosts || [])];
     } catch (error) {
       console.error('Erro ao buscar funcionários:', error);
       return [];
