@@ -212,25 +212,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
 
     try {
-      // Buscar funcionários criados por este host
+      // Buscar IDs de todos os Hosts com mesmo CNPJ
+      const hostIds = await getCompanyHostIds();
+
+      // Buscar funcionários criados por QUALQUER host do mesmo CNPJ
       const { data: funcionarios, error: funcError } = await supabase
         .from('users')
         .select('*')
         .eq('role', 'funcionario')
-        .eq('host_id', user.id)
+        .in('host_id', hostIds)
         .order('name');
 
       if (funcError) {
         console.error('Erro ao buscar funcionários:', funcError);
       }
 
-      // Buscar outros hosts criados por este host (mesmo CNPJ)
+      // Buscar outros hosts do mesmo CNPJ (excluir o próprio usuário)
       const { data: hosts, error: hostError } = await supabase
         .from('users')
         .select('*')
         .eq('role', 'host')
         .eq('cnpj', user.cnpj)
-        .neq('id', user.id) // Excluir o próprio usuário
+        .neq('id', user.id)
         .order('name');
 
       if (hostError) {
