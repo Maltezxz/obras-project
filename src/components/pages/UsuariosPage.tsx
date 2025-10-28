@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { Plus, Users, Trash2, Mail } from 'lucide-react';
+import { Plus, Users, Trash2, Mail, Crown, User as UserIcon } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { User } from '../../types';
 
@@ -12,6 +12,7 @@ export default function UsuariosPage() {
     name: '',
     email: '',
     password: '',
+    accountType: 'funcionario' as 'funcionario' | 'host',
   });
 
   const loadFuncionarios = useCallback(async () => {
@@ -84,16 +85,17 @@ export default function UsuariosPage() {
       const newEmployee = await addEmployee({
         name: formData.name.trim(),
         email: formData.email.trim(),
-        role: 'funcionario',
+        role: formData.accountType,
       }, formData.password.trim());
 
       console.log('✅ [UsuariosPage] Funcionário criado:', newEmployee);
 
       setShowModal(false);
-      setFormData({ name: '', email: '', password: '' });
+      setFormData({ name: '', email: '', password: '', accountType: 'funcionario' });
       await loadFuncionarios();
 
-      alert(`Funcionário ${newEmployee.name} criado com sucesso!\n\nCredenciais de login:\nCNPJ: ${user?.cnpj || 'o mesmo do host'}\nUsuário: ${newEmployee.name}\nSenha: ${formData.password}`);
+      const accountTypeLabel = formData.accountType === 'host' ? 'Host' : 'Funcionário';
+      alert(`${accountTypeLabel} ${newEmployee.name} criado com sucesso!\n\nCredenciais de login:\nCNPJ: ${user?.cnpj || 'o mesmo do host'}\nUsuário: ${newEmployee.name}\nSenha: ${formData.password}`);
     } catch (error: unknown) {
       console.error('❌ [UsuariosPage] Erro ao criar usuário:', error);
       if (error instanceof Error) {
@@ -166,8 +168,16 @@ export default function UsuariosPage() {
             <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent"></div>
             <div className="relative p-6">
               <div className="flex items-start justify-between mb-4">
-                <div className="p-3 rounded-xl bg-gradient-to-br from-blue-600 to-blue-500">
-                  <Users className="w-6 h-6 text-white" />
+                <div className={`p-3 rounded-xl ${
+                  funcionario.role === 'host'
+                    ? 'bg-gradient-to-br from-amber-600 to-amber-500'
+                    : 'bg-gradient-to-br from-blue-600 to-blue-500'
+                }`}>
+                  {funcionario.role === 'host' ? (
+                    <Crown className="w-6 h-6 text-white" />
+                  ) : (
+                    <Users className="w-6 h-6 text-white" />
+                  )}
                 </div>
                 <button
                   onClick={() => handleDelete(funcionario.id)}
@@ -176,9 +186,28 @@ export default function UsuariosPage() {
                   <Trash2 size={18} />
                 </button>
               </div>
-              <h3 className="text-lg font-semibold text-white mb-2">
-                {funcionario.name}
-              </h3>
+              <div className="flex items-center gap-2 mb-2">
+                <h3 className="text-lg font-semibold text-white">
+                  {funcionario.name}
+                </h3>
+                <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-semibold ${
+                  funcionario.role === 'host'
+                    ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
+                    : 'bg-blue-500/20 text-blue-300 border border-blue-500/30'
+                }`}>
+                  {funcionario.role === 'host' ? (
+                    <>
+                      <Crown size={12} />
+                      <span>Host</span>
+                    </>
+                  ) : (
+                    <>
+                      <UserIcon size={12} />
+                      <span>Usuário</span>
+                    </>
+                  )}
+                </span>
+              </div>
               <div className="flex items-center space-x-2 text-gray-400 text-sm">
                 <Mail size={16} />
                 <span>{funcionario.email}</span>
@@ -242,7 +271,50 @@ export default function UsuariosPage() {
                 </div>
                 <div className="space-y-2">
                   <label className="block text-sm font-medium text-gray-200">
-                    Senha do funcionário
+                    Tipo de Conta
+                  </label>
+                  <div className="grid grid-cols-2 gap-3">
+                    <button
+                      type="button"
+                      onClick={() => setFormData({ ...formData, accountType: 'funcionario' })}
+                      className={`flex items-center justify-center space-x-2 px-4 py-3 rounded-xl border-2 transition-all duration-200 ${
+                        formData.accountType === 'funcionario'
+                          ? 'bg-blue-500/20 border-blue-500 text-blue-300'
+                          : 'bg-white/5 border-white/20 text-gray-400 hover:bg-white/10'
+                      }`}
+                    >
+                      <UserIcon size={18} />
+                      <span className="font-medium">Usuário</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setFormData({ ...formData, accountType: 'host' })}
+                      className={`flex items-center justify-center space-x-2 px-4 py-3 rounded-xl border-2 transition-all duration-200 ${
+                        formData.accountType === 'host'
+                          ? 'bg-amber-500/20 border-amber-500 text-amber-300'
+                          : 'bg-white/5 border-white/20 text-gray-400 hover:bg-white/10'
+                      }`}
+                    >
+                      <Crown size={18} />
+                      <span className="font-medium">Host</span>
+                    </button>
+                  </div>
+                  <div className={`p-3 rounded-xl border ${
+                    formData.accountType === 'host'
+                      ? 'bg-amber-500/10 border-amber-500/20'
+                      : 'bg-blue-500/10 border-blue-500/20'
+                  }`}>
+                    <p className="text-sm text-gray-300">
+                      {formData.accountType === 'host'
+                        ? '🔑 Host terá acesso total ao sistema (criar obras, equipamentos, usuários, relatórios)'
+                        : '👤 Usuário terá acesso limitado conforme permissões configuradas'
+                      }
+                    </p>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-gray-200">
+                    Senha
                   </label>
                   <input
                     type="password"
@@ -252,11 +324,6 @@ export default function UsuariosPage() {
                     required
                     minLength={4}
                   />
-                  <div className="p-3 bg-blue-500/10 border border-blue-500/20 rounded-xl">
-                    <p className="text-sm text-blue-300">
-                      O funcionário fará login na mesma tela do host usando o mesmo CNPJ e o nome e senha definidos aqui.
-                    </p>
-                  </div>
                 </div>
                 <div className="flex space-x-3 pt-4">
                   <button

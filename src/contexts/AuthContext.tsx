@@ -138,14 +138,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     console.log('[addEmployee] Iniciando cadastro:', { name: employeeData.name, email: employeeData.email });
 
     try {
-      // 1. Criar funcionário na tabela users
+      // 1. Criar funcionário ou host na tabela users
       const { data: tableUser, error: tableError } = await supabase
         .from('users')
         .insert({
           name: employeeData.name,
           email: employeeData.email,
-          role: 'funcionario',
-          host_id: user.id,
+          role: employeeData.role, // pode ser 'funcionario' ou 'host'
+          host_id: employeeData.role === 'host' ? null : user.id, // host não tem host_id
           cnpj: hostCnpj,
         })
         .select()
