@@ -14,30 +14,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<unknown>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    console.log('🔐 AuthProvider - useEffect executado, checando sessão...');
-    checkSession();
+    console.log('🔐 AuthProvider - Montado! Loading = false (sem verificação de sessão)');
   }, []);
 
   const checkSession = async () => {
-    console.log('🔍 Checando sessão armazenada...');
-    try {
-      const storedUserId = sessionStorage.getItem('obrasflow_user_id');
-      console.log('💾 User ID armazenado:', storedUserId || 'Nenhum');
-
-      if (storedUserId) {
-        await loadUser(storedUserId);
-      } else {
-        console.log('ℹ️ Nenhuma sessão encontrada - usuário precisa fazer login');
-      }
-    } catch (error) {
-      console.error('❌ Erro ao verificar sessão:', error);
-    } finally {
-      console.log('✅ CheckSession finalizado, setando loading=false');
-      setLoading(false);
-    }
+    console.log('⚠️ checkSession chamado mas ignorado (simplificado)');
   };
 
   const loadUser = async (userId: string) => {
