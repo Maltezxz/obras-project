@@ -7,6 +7,7 @@ import { useRefresh } from '../../contexts/RefreshContext';
 import { Ferramenta, Obra } from '../../types';
 import { fileToBase64 } from '../../utils/fileUtils';
 import { getFilteredObras, getFilteredFerramentas } from '../../utils/permissions';
+import { FerramentaImage } from '../FerramentaImage';
 
 export default function FerramentasPage() {
   const { user, getCompanyHostIds } = useAuth();
@@ -452,15 +453,13 @@ export default function FerramentasPage() {
           >
             <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent"></div>
             <div className="relative p-6">
-              {ferramenta.image_url && (
-                <div className="mb-4 rounded-xl overflow-hidden border border-white/10">
-                  <img
-                    src={ferramenta.image_url}
-                    alt={ferramenta.name}
-                    className="w-full h-48 object-cover"
-                  />
-                </div>
-              )}
+              <div className="mb-4 rounded-xl overflow-hidden border border-white/10">
+                <FerramentaImage
+                  ferramentaId={ferramenta.id}
+                  alt={ferramenta.name}
+                  className="w-full h-48 object-cover"
+                />
+              </div>
               <div className="flex items-start justify-between mb-4">
                 <div className={`p-3 rounded-xl ${
                   ferramenta.status === 'desaparecida'
@@ -1085,6 +1084,13 @@ export default function FerramentasPage() {
                 </button>
               </div>
               <div className="p-6 space-y-4">
+                <div className="mb-4 rounded-xl overflow-hidden border border-white/10">
+                  <FerramentaImage
+                    ferramentaId={selectedFerramenta.id}
+                    alt={selectedFerramenta.name}
+                    className="w-full h-64 object-cover"
+                  />
+                </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <p className="text-xs text-gray-400 mb-1">Item</p>
