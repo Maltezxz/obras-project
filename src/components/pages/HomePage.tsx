@@ -137,7 +137,7 @@ export default function HomePage() {
     } finally {
       setLoading(false);
     }
-  }, [user]);
+  }, [user, getCompanyHostIds]);
 
   useEffect(() => {
     loadData();

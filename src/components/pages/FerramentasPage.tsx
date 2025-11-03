@@ -112,7 +112,7 @@ export default function FerramentasPage() {
     } finally {
       setLoading(false);
     }
-  }, [user]);
+  }, [user, getCompanyHostIds]);
 
   useEffect(() => {
     loadData();

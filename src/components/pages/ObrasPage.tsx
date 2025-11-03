@@ -71,7 +71,7 @@ export default function ObrasPage() {
     } finally {
       setLoading(false);
     }
-  }, [user]);
+  }, [user, getCompanyHostIds]);
 
   useEffect(() => {
     loadObras();
