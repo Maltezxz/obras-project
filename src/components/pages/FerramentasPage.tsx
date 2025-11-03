@@ -8,7 +8,6 @@ import { Ferramenta, Obra } from '../../types';
 import { fileToBase64 } from '../../utils/fileUtils';
 import { getFilteredObras, getFilteredFerramentas } from '../../utils/permissions';
 import { FerramentaImage } from '../FerramentaImage';
-import { ferramentasCache } from '../../utils/ferramentasCache';
 
 export default function FerramentasPage() {
   const { user, getCompanyHostIds } = useAuth();
@@ -77,30 +76,20 @@ export default function FerramentasPage() {
       }
 
       const ownerIds = hosts?.map(h => h.id) || [];
-      const ownerId = ownerIds[0] || user.id;
       console.log('Owner IDs:', ownerIds);
 
-      // Tentar cache primeiro
-      const cachedFerramentas = ferramentasCache.get(ownerId);
-      if (cachedFerramentas) {
-        console.log('✅ Ferramentas do cache:', cachedFerramentas.length);
-        setFerramentas(cachedFerramentas);
-      } else {
-        // Buscar do banco
-        const { data: ferramentasData, error: ferramError } = await supabase
-          .from('ferramentas')
-          .select('id, name, modelo, serial, status, current_type, current_id, cadastrado_por, owner_id, descricao, nf, nf_image_url, data, valor, tempo_garantia_dias, garantia, marca, numero_lacre, numero_placa, adesivo, usuario, obra, created_at, updated_at, tipo')
-          .in('owner_id', ownerIds)
-          .order('created_at', { ascending: false });
+      // BUSCAR FERRAMENTAS - SEM image_url para evitar timeout
+      const { data: ferramentasData, error: ferramError } = await supabase
+        .from('ferramentas')
+        .select('id, name, modelo, serial, status, current_type, current_id, cadastrado_por, owner_id, descricao, nf, nf_image_url, data, valor, tempo_garantia_dias, garantia, marca, numero_lacre, numero_placa, adesivo, usuario, obra, created_at, updated_at, tipo')
+        .in('owner_id', ownerIds)
+        .order('created_at', { ascending: false });
 
-        if (ferramError) {
-          console.error('Erro ao carregar ferramentas:', ferramError);
-        } else {
-          console.log('✅ Ferramentas carregadas:', ferramentasData?.length || 0);
-          const ferramList = ferramentasData || [];
-          setFerramentas(ferramList);
-          ferramentasCache.set(ownerId, ferramList);
-        }
+      if (ferramError) {
+        console.error('Erro ao carregar ferramentas:', ferramError);
+      } else {
+        console.log('✅ Ferramentas carregadas:', ferramentasData?.length || 0);
+        setFerramentas(ferramentasData || []);
       }
 
       // BUSCAR OBRAS - query simples e direta
@@ -282,7 +271,6 @@ export default function FerramentasPage() {
         obra: '',
       });
 
-      ferramentasCache.clear();
       await loadData();
       triggerRefresh();
     } catch (error: unknown) {
@@ -365,9 +353,7 @@ export default function FerramentasPage() {
         .eq('id', id);
 
       if (error) throw error;
-      ferramentasCache.clear();
       await loadData();
-      triggerRefresh();
     } catch (error) {
       console.error('Error deleting ferramenta:', error);
       alert('Erro ao excluir equipamento');

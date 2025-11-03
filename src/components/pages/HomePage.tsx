@@ -99,7 +99,7 @@ export default function HomePage() {
 
       const ferramRes = await supabase
         .from('ferramentas')
-        .select('id, name, modelo, serial, status, current_type, current_id, cadastrado_por, owner_id, descricao, tipo, created_at, updated_at')
+        .select('*')
         .in('owner_id', ownerIds);
 
       if (ferramRes.error) {
