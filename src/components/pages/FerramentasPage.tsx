@@ -99,13 +99,21 @@ export default function FerramentasPage() {
       console.log('📦 [FerramentasPage] Dados brutos:', ferramRes.data);
 
       const allFerramentas = ferramRes.data || [];
-      console.log('🔍 [FerramentasPage] Aplicando filtros de permissão...');
 
-      const filteredFerramentas = await getFilteredFerramentas(user.id, user.role, user.host_id || null, allFerramentas);
+      // Hosts veem todas as ferramentas sem filtro adicional
+      // Funcionários precisam de filtro de permissões
+      let finalFerramentas: Ferramenta[];
 
-      console.log('✅ [FerramentasPage] Ferramentas após filtro:', filteredFerramentas.length);
-      setFerramentas(filteredFerramentas);
-      console.log('✅ Ferramentas carregadas e filtradas do Supabase:', filteredFerramentas.length, 'ferramentas');
+      if (user.role === 'host') {
+        console.log('👑 [FerramentasPage] HOST vê todas as ferramentas sem filtro');
+        finalFerramentas = allFerramentas;
+      } else {
+        console.log('🔍 [FerramentasPage] Aplicando filtros de permissão para funcionário...');
+        finalFerramentas = await getFilteredFerramentas(user.id, user.role, user.host_id || null, allFerramentas);
+      }
+
+      console.log('✅ [FerramentasPage] Ferramentas finais:', finalFerramentas.length);
+      setFerramentas(finalFerramentas);
 
       const obrasRes = await supabase
         .from('obras')
@@ -119,10 +127,20 @@ export default function FerramentasPage() {
       }
 
       const allObras = obrasRes.data || [];
-      const filteredObras = await getFilteredObras(user.id, user.role, user.host_id, allObras);
 
-      setObras(filteredObras);
-      console.log('✅ Obras carregadas e filtradas do Supabase:', filteredObras.length, 'obras');
+      // Hosts veem todas as obras sem filtro adicional
+      let finalObras: Obra[];
+
+      if (user.role === 'host') {
+        console.log('👑 [FerramentasPage] HOST vê todas as obras sem filtro');
+        finalObras = allObras;
+      } else {
+        console.log('🔍 [FerramentasPage] Aplicando filtros de permissão para obras...');
+        finalObras = await getFilteredObras(user.id, user.role, user.host_id, allObras);
+      }
+
+      setObras(finalObras);
+      console.log('✅ Obras carregadas e filtradas do Supabase:', finalObras.length, 'obras');
     } catch (error) {
       console.error('Error loading data:', error);
     } finally {
