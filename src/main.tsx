@@ -14,18 +14,42 @@ if (!import.meta.env.VITE_SUPABASE_URL || !import.meta.env.VITE_SUPABASE_ANON_KE
   console.error('VITE_SUPABASE_URL:', import.meta.env.VITE_SUPABASE_URL ? '✓' : '✗');
   console.error('VITE_SUPABASE_ANON_KEY:', import.meta.env.VITE_SUPABASE_ANON_KEY ? '✓' : '✗');
 
-  // Show error to user
+  // Show error to user (using safe DOM creation)
   const root = document.getElementById('root');
   if (root) {
-    root.innerHTML = `
-      <div style="padding: 40px; font-family: system-ui; text-align: center;">
-        <h1 style="color: #e74c3c;">⚠️ Erro de Configuração</h1>
-        <p style="color: #666;">As variáveis de ambiente não estão configuradas.</p>
-        <p style="color: #666;">Configure VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY no servidor de deploy.</p>
-        <hr style="margin: 30px 0; border: none; border-top: 1px solid #ddd;">
-        <p style="font-size: 14px; color: #999;">Para debug, acesse: <a href="/debug.html">/debug.html</a></p>
-      </div>
-    `;
+    const container = document.createElement('div');
+    container.style.cssText = 'padding: 40px; font-family: system-ui; text-align: center;';
+
+    const h1 = document.createElement('h1');
+    h1.style.color = '#e74c3c';
+    h1.textContent = '⚠️ Erro de Configuração';
+
+    const p1 = document.createElement('p');
+    p1.style.color = '#666';
+    p1.textContent = 'As variáveis de ambiente não estão configuradas.';
+
+    const p2 = document.createElement('p');
+    p2.style.color = '#666';
+    p2.textContent = 'Configure VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY no servidor de deploy.';
+
+    const hr = document.createElement('hr');
+    hr.style.cssText = 'margin: 30px 0; border: none; border-top: 1px solid #ddd;';
+
+    const p3 = document.createElement('p');
+    p3.style.cssText = 'font-size: 14px; color: #999;';
+    p3.textContent = 'Para debug, acesse: ';
+    const a = document.createElement('a');
+    a.href = '/debug.html';
+    a.textContent = '/debug.html';
+    p3.appendChild(a);
+
+    container.appendChild(h1);
+    container.appendChild(p1);
+    container.appendChild(p2);
+    container.appendChild(hr);
+    container.appendChild(p3);
+
+    root.appendChild(container);
   }
 } else {
   console.log('✓ Variáveis de ambiente configuradas');
@@ -61,15 +85,39 @@ if (!import.meta.env.VITE_SUPABASE_URL || !import.meta.env.VITE_SUPABASE_ANON_KE
     console.error('❌ Erro ao inicializar aplicação:', error);
     const root = document.getElementById('root');
     if (root) {
-      root.innerHTML = `
-        <div style="padding: 40px; font-family: system-ui; text-align: center;">
-          <h1 style="color: #e74c3c;">❌ Erro ao Inicializar</h1>
-          <p style="color: #666;">${error instanceof Error ? error.message : 'Erro desconhecido'}</p>
-          <p style="font-size: 14px; color: #999;">Abra o console (F12) para mais detalhes</p>
-          <hr style="margin: 30px 0; border: none; border-top: 1px solid #ddd;">
-          <p style="font-size: 14px; color: #999;">Para debug, acesse: <a href="/debug.html">/debug.html</a></p>
-        </div>
-      `;
+      const container = document.createElement('div');
+      container.style.cssText = 'padding: 40px; font-family: system-ui; text-align: center;';
+
+      const h1 = document.createElement('h1');
+      h1.style.color = '#e74c3c';
+      h1.textContent = '❌ Erro ao Inicializar';
+
+      const p1 = document.createElement('p');
+      p1.style.color = '#666';
+      p1.textContent = error instanceof Error ? error.message : 'Erro desconhecido';
+
+      const p2 = document.createElement('p');
+      p2.style.cssText = 'font-size: 14px; color: #999;';
+      p2.textContent = 'Abra o console (F12) para mais detalhes';
+
+      const hr = document.createElement('hr');
+      hr.style.cssText = 'margin: 30px 0; border: none; border-top: 1px solid #ddd;';
+
+      const p3 = document.createElement('p');
+      p3.style.cssText = 'font-size: 14px; color: #999;';
+      p3.textContent = 'Para debug, acesse: ';
+      const a = document.createElement('a');
+      a.href = '/debug.html';
+      a.textContent = '/debug.html';
+      p3.appendChild(a);
+
+      container.appendChild(h1);
+      container.appendChild(p1);
+      container.appendChild(p2);
+      container.appendChild(hr);
+      container.appendChild(p3);
+
+      root.appendChild(container);
     }
   }
 }
