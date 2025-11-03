@@ -52,101 +52,66 @@ export default function FerramentasPage() {
 
   const loadData = useCallback(async () => {
     try {
-      console.log('🔄 [FerramentasPage] Iniciando loadData');
-      console.log('👤 [FerramentasPage] User:', { id: user?.id, role: user?.role, cnpj: user?.cnpj, name: user?.name });
-
       if (!user?.id) {
-        console.warn('⚠️ [FerramentasPage] Usuário não está logado');
         setFerramentas([]);
         setObras([]);
         setLoading(false);
         return;
       }
 
-      let ownerIds: string[] = [];
+      console.log('🔄 Carregando ferramentas para:', user.name, user.role);
 
-      if (user.role === 'host') {
-        console.log('👑 [FerramentasPage] Usuário é HOST, buscando IDs da empresa...');
-        ownerIds = await getCompanyHostIds?.() || [user.id];
-        console.log('🏢 [FerramentasPage] Owner IDs encontrados:', ownerIds);
-      } else {
-        ownerIds = user.host_id ? [user.host_id] : [];
-        console.log('👷 [FerramentasPage] Usuário é funcionário, owner_ids:', ownerIds);
-      }
+      // QUERY DIRETA E SIMPLES - buscar todos os hosts do mesmo CNPJ
+      const { data: hosts, error: hostsError } = await supabase
+        .from('users')
+        .select('id')
+        .eq('role', 'host')
+        .eq('cnpj', user.cnpj);
 
-      if (ownerIds.length === 0) {
-        console.error('❌ [FerramentasPage] Nenhum owner_id encontrado!');
-        setFerramentas([]);
-        setObras([]);
+      if (hostsError) {
+        console.error('Erro ao buscar hosts:', hostsError);
         setLoading(false);
         return;
       }
 
-      console.log('🔍 [FerramentasPage] Buscando ferramentas com owner_ids:', ownerIds);
+      const ownerIds = hosts?.map(h => h.id) || [];
+      console.log('Owner IDs:', ownerIds);
 
-      const ferramRes = await supabase
+      // BUSCAR FERRAMENTAS - query simples e direta
+      const { data: ferramentasData, error: ferramError } = await supabase
         .from('ferramentas')
         .select('*')
         .in('owner_id', ownerIds)
         .order('created_at', { ascending: false });
 
-      if (ferramRes.error) {
-        console.error('❌ [FerramentasPage] Erro ao carregar ferramentas do Supabase:', ferramRes.error);
-        throw ferramRes.error;
-      }
-
-      console.log('📦 [FerramentasPage] Ferramentas retornadas do Supabase:', ferramRes.data?.length || 0);
-      console.log('📦 [FerramentasPage] Dados brutos:', ferramRes.data);
-
-      const allFerramentas = ferramRes.data || [];
-
-      // Hosts veem todas as ferramentas sem filtro adicional
-      // Funcionários precisam de filtro de permissões
-      let finalFerramentas: Ferramenta[];
-
-      if (user.role === 'host') {
-        console.log('👑 [FerramentasPage] HOST vê todas as ferramentas sem filtro');
-        finalFerramentas = allFerramentas;
+      if (ferramError) {
+        console.error('Erro ao carregar ferramentas:', ferramError);
       } else {
-        console.log('🔍 [FerramentasPage] Aplicando filtros de permissão para funcionário...');
-        finalFerramentas = await getFilteredFerramentas(user.id, user.role, user.host_id || null, allFerramentas);
+        console.log('✅ Ferramentas carregadas:', ferramentasData?.length || 0);
+        setFerramentas(ferramentasData || []);
       }
 
-      console.log('✅ [FerramentasPage] Ferramentas finais:', finalFerramentas.length);
-      setFerramentas(finalFerramentas);
-
-      const obrasRes = await supabase
+      // BUSCAR OBRAS - query simples e direta
+      const { data: obrasData, error: obrasError } = await supabase
         .from('obras')
         .select('*')
         .in('owner_id', ownerIds)
-        .eq('status', 'ativa');
+        .eq('status', 'ativa')
+        .order('created_at', { ascending: false });
 
-      if (obrasRes.error) {
-        console.error('Erro ao carregar obras do Supabase:', obrasRes.error);
-        throw obrasRes.error;
-      }
-
-      const allObras = obrasRes.data || [];
-
-      // Hosts veem todas as obras sem filtro adicional
-      let finalObras: Obra[];
-
-      if (user.role === 'host') {
-        console.log('👑 [FerramentasPage] HOST vê todas as obras sem filtro');
-        finalObras = allObras;
+      if (obrasError) {
+        console.error('Erro ao carregar obras:', obrasError);
       } else {
-        console.log('🔍 [FerramentasPage] Aplicando filtros de permissão para obras...');
-        finalObras = await getFilteredObras(user.id, user.role, user.host_id, allObras);
+        console.log('✅ Obras carregadas:', obrasData?.length || 0);
+        setObras(obrasData || []);
       }
 
-      setObras(finalObras);
-      console.log('✅ Obras carregadas e filtradas do Supabase:', finalObras.length, 'obras');
     } catch (error) {
-      console.error('Error loading data:', error);
+      console.error('Erro geral:', error);
     } finally {
       setLoading(false);
     }
-  }, [user, getCompanyHostIds]);
+  }, [user]);
 
   useEffect(() => {
     loadData();
