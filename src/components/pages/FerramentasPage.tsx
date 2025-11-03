@@ -77,10 +77,10 @@ export default function FerramentasPage() {
       const ownerIds = hosts?.map(h => h.id) || [];
       console.log('Owner IDs:', ownerIds);
 
-      // BUSCAR FERRAMENTAS - query simples e direta
+      // BUSCAR FERRAMENTAS - SEM image_url para evitar timeout
       const { data: ferramentasData, error: ferramError } = await supabase
         .from('ferramentas')
-        .select('*')
+        .select('id, name, modelo, serial, status, current_type, current_id, cadastrado_por, owner_id, descricao, nf, nf_image_url, data, valor, tempo_garantia_dias, garantia, marca, numero_lacre, numero_placa, adesivo, usuario, obra, created_at, updated_at, tipo')
         .in('owner_id', ownerIds)
         .order('created_at', { ascending: false });
 
