@@ -3,12 +3,16 @@ import { useAuth } from '../hooks/useAuth';
 import logoImage from '../assets/pratica-logo.png';
 
 export default function Login() {
+  console.log('🔓 Login - Componente renderizando!');
+
   const [cnpj, setCnpj] = useState(import.meta.env.VITE_DEFAULT_CNPJ || '');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const { signIn } = useAuth();
+
+  console.log('🔓 Login - Estado:', { cnpj, hasUsername: !!username, hasPassword: !!password });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -24,6 +28,8 @@ export default function Login() {
       setLoading(false);
     }
   };
+
+  console.log('🎨 Login - Renderizando JSX (tela de login)');
 
   return (
     <div className="min-h-screen relative overflow-hidden bg-gradient-to-br from-black via-gray-900 to-gray-800">

@@ -23,7 +23,11 @@ function AppContent() {
   }
 
   console.log('🎯 Decisão:', user ? 'Mostrar Dashboard' : 'Mostrar Login');
-  return user ? <Dashboard /> : <Login />;
+
+  const component = user ? <Dashboard /> : <Login />;
+  console.log('✅ Componente selecionado:', user ? 'Dashboard' : 'Login');
+
+  return component;
 }
 
 function App() {
