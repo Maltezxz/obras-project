@@ -61,11 +61,27 @@ export default function HomePage() {
         return;
       }
 
+      console.log('🔄 Carregando dados da Home para:', user.name, user.role);
+
       let ownerIds: string[] = [];
 
+      // Para HOSTS: buscar TODOS os hosts do mesmo CNPJ (todos veem a mesma coisa)
       if (user.role === 'host') {
-        ownerIds = await getCompanyHostIds?.() || [user.id];
+        const { data: hosts, error: hostsError } = await supabase
+          .from('users')
+          .select('id')
+          .eq('role', 'host')
+          .eq('cnpj', user.cnpj);
+
+        if (hostsError) {
+          console.error('Erro ao buscar hosts:', hostsError);
+          ownerIds = [user.id];
+        } else {
+          ownerIds = hosts?.map(h => h.id) || [user.id];
+        }
+        console.log('📊 Host Owner IDs:', ownerIds);
       } else {
+        // Para FUNCIONÁRIOS: usar apenas o host_id dele
         ownerIds = user.host_id ? [user.host_id] : [];
       }
 
@@ -76,6 +92,7 @@ export default function HomePage() {
         return;
       }
 
+      // BUSCAR OBRAS
       const obrasRes = await supabase
         .from('obras')
         .select('*')
@@ -84,41 +101,44 @@ export default function HomePage() {
         .order('created_at', { ascending: false });
 
       if (obrasRes.error) {
-        console.error('Erro ao carregar obras do Supabase:', obrasRes.error);
-        throw obrasRes.error;
+        console.error('Erro ao carregar obras:', obrasRes.error);
+      } else {
+        const allObras = obrasRes.data || [];
+
+        // HOSTS: mostram TUDO | FUNCIONÁRIOS: filtrar por permissões
+        if (user.role === 'host') {
+          setObras(allObras);
+          console.log('✅ HOST vê todas as obras:', allObras.length);
+        } else {
+          const filteredObras = await getFilteredObras(user.id, user.role, user.host_id, allObras);
+          setObras(filteredObras);
+          console.log('✅ FUNCIONÁRIO vê obras filtradas:', filteredObras.length, 'de', allObras.length);
+        }
       }
 
-      const allObras = obrasRes.data || [];
-      const filteredObras = await getFilteredObras(user.id, user.role, user.host_id, allObras);
-
-      setObras(filteredObras);
-      console.log('✅ Obras carregadas e filtradas do Supabase na Home:', {
-        total: allObras.length,
-        permitidas: filteredObras.length
-      });
-
+      // BUSCAR FERRAMENTAS
       const ferramRes = await supabase
         .from('ferramentas')
         .select('*')
         .in('owner_id', ownerIds);
 
       if (ferramRes.error) {
-        console.error('Erro ao carregar ferramentas do Supabase:', ferramRes.error);
-        throw ferramRes.error;
+        console.error('Erro ao carregar ferramentas:', ferramRes.error);
+      } else {
+        const allFerramentas = ferramRes.data || [];
+
+        // HOSTS: mostram TUDO | FUNCIONÁRIOS: filtrar por permissões
+        if (user.role === 'host') {
+          setFerramentas(allFerramentas);
+          console.log('✅ HOST vê todas as ferramentas:', allFerramentas.length);
+        } else {
+          const filteredFerramentas = await getFilteredFerramentas(user.id, user.role, user.host_id || null, allFerramentas);
+          setFerramentas(filteredFerramentas);
+          console.log('✅ FUNCIONÁRIO vê ferramentas filtradas:', filteredFerramentas.length, 'de', allFerramentas.length);
+        }
       }
 
-      const allFerramentas = ferramRes.data || [];
-      const filteredFerramentas = await getFilteredFerramentas(user.id, user.role, user.host_id || null, allFerramentas);
-
-      setFerramentas(filteredFerramentas);
-      console.log('✅ Ferramentas carregadas e filtradas do Supabase na Home:', {
-        total: allFerramentas.length,
-        permitidas: filteredFerramentas.length,
-        disponiveis: filteredFerramentas.filter(f => f.status === 'disponivel').length,
-        em_uso: filteredFerramentas.filter(f => f.status === 'em_uso').length,
-        desaparecidas: filteredFerramentas.filter(f => f.status === 'desaparecida').length
-      });
-
+      // BUSCAR HISTÓRICO
       const historicoRes = await supabase
         .from('historico')
         .select('*')
@@ -137,7 +157,7 @@ export default function HomePage() {
     } finally {
       setLoading(false);
     }
-  }, [user, getCompanyHostIds]);
+  }, [user]);
 
   useEffect(() => {
     loadData();
