@@ -1,10 +1,30 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 
-// Cache de imagens em memória
-const imageCache = new Map<string, string>();
+const imageCache = new Map<string, { url: string; timestamp: number }>();
+const CACHE_DURATION = 10 * 60 * 1000;
 
-export function useFerramentaImage(ferramentaId: string) {
+const loadQueue: Array<() => Promise<void>> = [];
+let isProcessingQueue = false;
+
+async function processQueue() {
+  if (isProcessingQueue || loadQueue.length === 0) return;
+
+  isProcessingQueue = true;
+  const task = loadQueue.shift();
+
+  if (task) {
+    await task();
+    setTimeout(() => {
+      isProcessingQueue = false;
+      processQueue();
+    }, 50);
+  } else {
+    isProcessingQueue = false;
+  }
+}
+
+export function useFerramentaImage(ferramentaId: string, priority = false) {
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -12,36 +32,46 @@ export function useFerramentaImage(ferramentaId: string) {
     let isMounted = true;
 
     async function loadImage() {
-      // Verificar cache primeiro
-      if (imageCache.has(ferramentaId)) {
+      const cached = imageCache.get(ferramentaId);
+      if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
         if (isMounted) {
-          setImageUrl(imageCache.get(ferramentaId) || null);
+          setImageUrl(cached.url);
           setLoading(false);
         }
         return;
       }
 
-      try {
-        // Buscar apenas o image_url desta ferramenta específica
-        const { data, error } = await supabase
-          .from('ferramentas')
-          .select('image_url')
-          .eq('id', ferramentaId)
-          .single();
+      const task = async () => {
+        try {
+          const { data, error } = await supabase
+            .from('ferramentas')
+            .select('image_url')
+            .eq('id', ferramentaId)
+            .maybeSingle();
 
-        if (error) throw error;
+          if (error) throw error;
 
-        if (isMounted && data?.image_url) {
-          // Salvar no cache
-          imageCache.set(ferramentaId, data.image_url);
-          setImageUrl(data.image_url);
+          if (isMounted && data?.image_url) {
+            imageCache.set(ferramentaId, {
+              url: data.image_url,
+              timestamp: Date.now()
+            });
+            setImageUrl(data.image_url);
+          }
+        } catch (error) {
+          console.error('Erro ao carregar imagem:', error);
+        } finally {
+          if (isMounted) {
+            setLoading(false);
+          }
         }
-      } catch (error) {
-        console.error('Erro ao carregar imagem:', error);
-      } finally {
-        if (isMounted) {
-          setLoading(false);
-        }
+      };
+
+      if (priority) {
+        await task();
+      } else {
+        loadQueue.push(task);
+        processQueue();
       }
     }
 
@@ -50,7 +80,7 @@ export function useFerramentaImage(ferramentaId: string) {
     return () => {
       isMounted = false;
     };
-  }, [ferramentaId]);
+  }, [ferramentaId, priority]);
 
   return { imageUrl, loading };
 }
