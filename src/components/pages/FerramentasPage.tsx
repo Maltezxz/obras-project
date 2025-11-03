@@ -62,23 +62,37 @@ export default function FerramentasPage() {
 
       console.log('🔄 Carregando ferramentas para:', user.name, user.role);
 
-      // QUERY DIRETA E SIMPLES - buscar todos os hosts do mesmo CNPJ
-      const { data: hosts, error: hostsError } = await supabase
-        .from('users')
-        .select('id')
-        .eq('role', 'host')
-        .eq('cnpj', user.cnpj);
+      let ownerIds: string[] = [];
 
-      if (hostsError) {
-        console.error('Erro ao buscar hosts:', hostsError);
+      // Para HOSTS: buscar TODOS os hosts do mesmo CNPJ (todos veem a mesma coisa)
+      if (user.role === 'host') {
+        const { data: hosts, error: hostsError } = await supabase
+          .from('users')
+          .select('id')
+          .eq('role', 'host')
+          .eq('cnpj', user.cnpj);
+
+        if (hostsError) {
+          console.error('Erro ao buscar hosts:', hostsError);
+          ownerIds = [user.id];
+        } else {
+          ownerIds = hosts?.map(h => h.id) || [user.id];
+        }
+        console.log('📊 HOST Owner IDs:', ownerIds);
+      } else {
+        // Para FUNCIONÁRIOS: usar apenas o host_id dele
+        ownerIds = user.host_id ? [user.host_id] : [];
+        console.log('📊 FUNCIONÁRIO Owner IDs:', ownerIds);
+      }
+
+      if (ownerIds.length === 0) {
+        setFerramentas([]);
+        setObras([]);
         setLoading(false);
         return;
       }
 
-      const ownerIds = hosts?.map(h => h.id) || [];
-      console.log('Owner IDs:', ownerIds);
-
-      // BUSCAR FERRAMENTAS - SEM image_url para evitar timeout
+      // BUSCAR FERRAMENTAS
       const { data: ferramentasData, error: ferramError } = await supabase
         .from('ferramentas')
         .select('id, name, modelo, serial, status, current_type, current_id, cadastrado_por, owner_id, descricao, nf, nf_image_url, data, valor, tempo_garantia_dias, garantia, marca, numero_lacre, numero_placa, adesivo, usuario, obra, created_at, updated_at, tipo')
@@ -88,11 +102,20 @@ export default function FerramentasPage() {
       if (ferramError) {
         console.error('Erro ao carregar ferramentas:', ferramError);
       } else {
-        console.log('✅ Ferramentas carregadas:', ferramentasData?.length || 0);
-        setFerramentas(ferramentasData || []);
+        const allFerramentas = ferramentasData || [];
+
+        // HOSTS: mostram TUDO | FUNCIONÁRIOS: filtrar por permissões
+        if (user.role === 'host') {
+          setFerramentas(allFerramentas);
+          console.log('✅ HOST vê todas as ferramentas:', allFerramentas.length);
+        } else {
+          const filteredFerramentas = await getFilteredFerramentas(user.id, user.role, user.host_id || null, allFerramentas);
+          setFerramentas(filteredFerramentas);
+          console.log('✅ FUNCIONÁRIO vê ferramentas filtradas:', filteredFerramentas.length, 'de', allFerramentas.length);
+        }
       }
 
-      // BUSCAR OBRAS - query simples e direta
+      // BUSCAR OBRAS
       const { data: obrasData, error: obrasError } = await supabase
         .from('obras')
         .select('*')
@@ -103,8 +126,17 @@ export default function FerramentasPage() {
       if (obrasError) {
         console.error('Erro ao carregar obras:', obrasError);
       } else {
-        console.log('✅ Obras carregadas:', obrasData?.length || 0);
-        setObras(obrasData || []);
+        const allObras = obrasData || [];
+
+        // HOSTS: mostram TUDO | FUNCIONÁRIOS: filtrar por permissões
+        if (user.role === 'host') {
+          setObras(allObras);
+          console.log('✅ HOST vê todas as obras:', allObras.length);
+        } else {
+          const filteredObras = await getFilteredObras(user.id, user.role, user.host_id, allObras);
+          setObras(filteredObras);
+          console.log('✅ FUNCIONÁRIO vê obras filtradas:', filteredObras.length, 'de', allObras.length);
+        }
       }
 
     } catch (error) {

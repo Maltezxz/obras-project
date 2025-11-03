@@ -117,20 +117,28 @@ export default function HomePage() {
       }
 
       // BUSCAR FERRAMENTAS
+      console.log('🔍 Buscando ferramentas com owner_ids:', ownerIds);
       const ferramRes = await supabase
         .from('ferramentas')
         .select('*')
         .in('owner_id', ownerIds);
 
       if (ferramRes.error) {
-        console.error('Erro ao carregar ferramentas:', ferramRes.error);
+        console.error('❌ Erro ao carregar ferramentas:', ferramRes.error);
       } else {
         const allFerramentas = ferramRes.data || [];
+        console.log('📦 Ferramentas retornadas do banco:', allFerramentas.length, allFerramentas);
 
         // HOSTS: mostram TUDO | FUNCIONÁRIOS: filtrar por permissões
         if (user.role === 'host') {
           setFerramentas(allFerramentas);
           console.log('✅ HOST vê todas as ferramentas:', allFerramentas.length);
+          console.log('📊 Por status:', {
+            disponiveis: allFerramentas.filter(f => f.status === 'disponivel').length,
+            em_uso: allFerramentas.filter(f => f.status === 'em_uso').length,
+            desaparecidas: allFerramentas.filter(f => f.status === 'desaparecida').length,
+            total_nao_desaparecidas: allFerramentas.filter(f => f.status !== 'desaparecida').length
+          });
         } else {
           const filteredFerramentas = await getFilteredFerramentas(user.id, user.role, user.host_id || null, allFerramentas);
           setFerramentas(filteredFerramentas);
