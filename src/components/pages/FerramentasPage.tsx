@@ -52,7 +52,11 @@ export default function FerramentasPage() {
 
   const loadData = useCallback(async () => {
     try {
+      console.log('🔄 [FerramentasPage] Iniciando loadData');
+      console.log('👤 [FerramentasPage] User:', { id: user?.id, role: user?.role, cnpj: user?.cnpj, name: user?.name });
+
       if (!user?.id) {
+        console.warn('⚠️ [FerramentasPage] Usuário não está logado');
         setFerramentas([]);
         setObras([]);
         setLoading(false);
@@ -62,17 +66,23 @@ export default function FerramentasPage() {
       let ownerIds: string[] = [];
 
       if (user.role === 'host') {
+        console.log('👑 [FerramentasPage] Usuário é HOST, buscando IDs da empresa...');
         ownerIds = await getCompanyHostIds?.() || [user.id];
+        console.log('🏢 [FerramentasPage] Owner IDs encontrados:', ownerIds);
       } else {
         ownerIds = user.host_id ? [user.host_id] : [];
+        console.log('👷 [FerramentasPage] Usuário é funcionário, owner_ids:', ownerIds);
       }
 
       if (ownerIds.length === 0) {
+        console.error('❌ [FerramentasPage] Nenhum owner_id encontrado!');
         setFerramentas([]);
         setObras([]);
         setLoading(false);
         return;
       }
+
+      console.log('🔍 [FerramentasPage] Buscando ferramentas com owner_ids:', ownerIds);
 
       const ferramRes = await supabase
         .from('ferramentas')
@@ -81,13 +91,19 @@ export default function FerramentasPage() {
         .order('created_at', { ascending: false });
 
       if (ferramRes.error) {
-        console.error('Erro ao carregar ferramentas do Supabase:', ferramRes.error);
+        console.error('❌ [FerramentasPage] Erro ao carregar ferramentas do Supabase:', ferramRes.error);
         throw ferramRes.error;
       }
 
+      console.log('📦 [FerramentasPage] Ferramentas retornadas do Supabase:', ferramRes.data?.length || 0);
+      console.log('📦 [FerramentasPage] Dados brutos:', ferramRes.data);
+
       const allFerramentas = ferramRes.data || [];
+      console.log('🔍 [FerramentasPage] Aplicando filtros de permissão...');
+
       const filteredFerramentas = await getFilteredFerramentas(user.id, user.role, user.host_id || null, allFerramentas);
 
+      console.log('✅ [FerramentasPage] Ferramentas após filtro:', filteredFerramentas.length);
       setFerramentas(filteredFerramentas);
       console.log('✅ Ferramentas carregadas e filtradas do Supabase:', filteredFerramentas.length, 'ferramentas');
 
