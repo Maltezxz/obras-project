@@ -192,6 +192,18 @@ export default function HomePage() {
     };
   }, [loadData, refreshTrigger]);
 
+  const totalEquipamentos = ferramentas.filter(f => f.status !== 'desaparecida').length;
+  const totalDesaparecidos = ferramentas.filter(f => f.status === 'desaparecida').length;
+
+  console.log('📊 RENDER HomePage - Stats:', {
+    obras: obras.length,
+    ferramentas_total: ferramentas.length,
+    equipamentos: totalEquipamentos,
+    desaparecidos: totalDesaparecidos,
+    user: user?.name,
+    role: user?.role
+  });
+
   const stats = [
     {
       label: 'Obras Ativas',
@@ -203,7 +215,7 @@ export default function HomePage() {
     },
     {
       label: 'Equipamentos',
-      value: ferramentas.filter(f => f.status !== 'desaparecida').length,
+      value: totalEquipamentos,
       icon: Wrench,
       color: 'from-green-500 to-green-600',
       bgColor: 'bg-green-500/10',
@@ -211,7 +223,7 @@ export default function HomePage() {
     },
     {
       label: 'Desaparecidos',
-      value: ferramentas.filter(f => f.status === 'desaparecida').length,
+      value: totalDesaparecidos,
       icon: AlertTriangle,
       color: 'from-red-500 to-red-600',
       bgColor: 'bg-red-500/10',
