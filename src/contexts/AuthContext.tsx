@@ -10,23 +10,32 @@ function simpleHash(password: string): string {
 }
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
+  console.log('🔐 AuthProvider - Inicializando...');
+
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<unknown>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    console.log('🔐 AuthProvider - useEffect executado, checando sessão...');
     checkSession();
   }, []);
 
   const checkSession = async () => {
+    console.log('🔍 Checando sessão armazenada...');
     try {
       const storedUserId = sessionStorage.getItem('obrasflow_user_id');
+      console.log('💾 User ID armazenado:', storedUserId || 'Nenhum');
+
       if (storedUserId) {
         await loadUser(storedUserId);
+      } else {
+        console.log('ℹ️ Nenhuma sessão encontrada - usuário precisa fazer login');
       }
     } catch (error) {
-      console.error('Erro ao verificar sessão:', error);
+      console.error('❌ Erro ao verificar sessão:', error);
     } finally {
+      console.log('✅ CheckSession finalizado, setando loading=false');
       setLoading(false);
     }
   };
