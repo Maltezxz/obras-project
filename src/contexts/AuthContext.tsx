@@ -199,6 +199,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       console.log('✅ Login bem-sucedido! Salvando sessão...');
 
+      // LIMPAR TODOS os storages antigos para evitar dados desatualizados
+      console.log('🧹 Limpando localStorage e sessionStorage...');
+      localStorage.clear();
+      sessionStorage.clear();
+
       // 4. Definir usuário logado e salvar em cookie
       setUser(userData);
       setCookie(AUTH_COOKIE_NAME, userData.id, COOKIE_EXPIRES_DAYS);
