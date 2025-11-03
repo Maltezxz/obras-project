@@ -116,11 +116,11 @@ export default function HomePage() {
         }
       }
 
-      // BUSCAR FERRAMENTAS
+      // BUSCAR FERRAMENTAS - SEM image_url e nf_image_url para evitar timeout com imagens grandes
       console.log('🔍 Buscando ferramentas com owner_ids:', ownerIds);
       const ferramRes = await supabase
         .from('ferramentas')
-        .select('*')
+        .select('id, name, modelo, serial, status, current_type, current_id, cadastrado_por, owner_id, created_at')
         .in('owner_id', ownerIds);
 
       if (ferramRes.error) {
