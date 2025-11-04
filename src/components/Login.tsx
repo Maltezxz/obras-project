@@ -70,8 +70,8 @@ export default function Login() {
                       id="cnpj"
                       type="text"
                       value={cnpj}
-                      onChange={(e) => setCnpj(e.target.value)}
-                      className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-red-500/50 focus:border-red-500/50 transition-all duration-200 backdrop-blur-xl"
+                      readOnly
+                      className="w-full px-4 py-3 bg-white/5 border border-white/20 rounded-xl text-gray-300 placeholder-gray-400 cursor-not-allowed backdrop-blur-xl"
                       placeholder="00.000.000/0000-00"
                       required
                     />

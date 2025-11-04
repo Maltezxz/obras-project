@@ -7,7 +7,7 @@ Após a migração para o banco de dados local, o sistema cria automaticamente u
 ### Dados de Acesso
 
 ```
-CNPJ: 12345678000190
+CNPJ: 04.205.151/0001-37 (pré-preenchido e bloqueado)
 Nome de Usuário: Fernando Antunes
 Senha: senha123
 ```
@@ -15,7 +15,12 @@ Senha: senha123
 ### Tipo de Conta
 - **Role**: Host (Engenheiro)
 - **Permissões**: Acesso total ao sistema
-- **CNPJ da Empresa**: 12345678000190
+- **CNPJ da Empresa**: 04.205.151/0001-37
+
+### Observação Importante
+- O campo CNPJ está pré-preenchido e **não pode ser alterado**
+- Todos os usuários do sistema usam o mesmo CNPJ da empresa
+- Apenas digite o nome de usuário e senha para fazer login
 
 ## Importante
 

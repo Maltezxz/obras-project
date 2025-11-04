@@ -161,7 +161,7 @@ const SCHEMA = `
 
 const INITIAL_DATA = `
   INSERT OR IGNORE INTO users (id, name, email, cnpj, role, host_id) VALUES
-  ('host-fernando', 'Fernando Antunes', 'fernando@pratica.eng.br', '12345678000190', 'host', NULL);
+  ('host-fernando', 'Fernando Antunes', 'fernando@pratica.eng.br', '04.205.151/0001-37', 'host', NULL);
 
   INSERT OR IGNORE INTO user_credentials (user_id, password_hash) VALUES
   ('host-fernando', '${btoa('senha123')}');

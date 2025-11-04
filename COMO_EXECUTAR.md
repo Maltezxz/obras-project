@@ -1,77 +1,114 @@
-# 🚀 Como Executar o Projeto ObraFlow
+# Como Executar o Sistema
 
-## 📋 Pré-requisitos
+## Requisitos
 - Node.js instalado (versão 16 ou superior)
-- npm ou yarn instalado
+- npm (vem com o Node.js)
 
-## 🔧 Passos para Executar
+## Passos para Executar
 
 ### 1. Instalar Dependências
 ```bash
-cd project
 npm install
 ```
 
-### 2. Criar Arquivo de Configuração (Opcional)
-Crie um arquivo `.env` na pasta `project` com suas configurações do Supabase:
-```env
-VITE_SUPABASE_URL=https://seu-projeto.supabase.co
-VITE_SUPABASE_ANON_KEY=sua-chave-anonima-aqui
-```
-
-**Nota:** O projeto funcionará mesmo sem este arquivo, usando o sistema de login visual.
-
-### 3. Executar o Projeto
+### 2. Iniciar o Servidor de Desenvolvimento
 ```bash
 npm run dev
 ```
 
-### 4. Acessar no Navegador
-O projeto estará disponível em: `http://localhost:5173`
+O sistema estará disponível em: `http://localhost:5173`
 
-## 🔑 Credenciais de Login
+### 3. Fazer Login
 
-### Host (Administrador)
-- **CNPJ:** 89.263.465/0001-49
-- **Usuário:** danilo
-- **Senha:** 123456
+O sistema abrirá a tela de login com os seguintes dados:
 
-### Funcionários
-- **Usuário:** Nome do funcionário (cadastrado pelo host)
-- **Senha:** 123456 (padrão para todos)
+**CNPJ**: `04.205.151/0001-37` (já vem pré-preenchido e bloqueado)
+**Usuário**: `Fernando Antunes`
+**Senha**: `senha123`
 
-## 🛠️ Solução de Problemas
+> O campo CNPJ não pode ser alterado. Todos os usuários do sistema usam o mesmo CNPJ da empresa.
 
-### Se o projeto não carregar:
-1. Verifique se o Node.js está instalado: `node --version`
-2. Verifique se as dependências foram instaladas: `npm list`
-3. Limpe o cache: `npm cache clean --force`
-4. Reinstale as dependências: `rm -rf node_modules && npm install`
+## Build para Produção
 
-### Se houver erros de compilação:
-1. Verifique se todos os arquivos estão salvos
-2. Pare o servidor (Ctrl+C) e execute novamente: `npm run dev`
-3. Verifique o console do navegador para erros específicos
+Para criar uma versão otimizada para produção:
 
-## 📱 Funcionalidades Disponíveis
+```bash
+npm run build
+```
 
-### Para Host:
-- ✅ Login com credenciais fixas
-- ✅ Cadastrar funcionários
-- ✅ Gerenciar obras
-- ✅ Gerenciar estabelecimentos
-- ✅ Cadastrar equipamentos
-- ✅ Visualizar relatórios
+Os arquivos serão gerados na pasta `dist/`
 
-### Para Funcionários:
-- ✅ Login com credenciais criadas pelo host
-- ✅ Cadastrar equipamentos
-- ✅ Transferir equipamentos entre obras
-- ✅ Visualizar relatórios
+## Verificar Tipos TypeScript
 
-## 🎯 Status do Projeto
-- ✅ Sistema de autenticação visual funcionando
-- ✅ Interface responsiva
-- ✅ Controle de permissões por tipo de usuário
-- ✅ Sistema de funcionários local
-- ✅ Todas as páginas implementadas
+Para verificar erros de tipos sem compilar:
+
+```bash
+npm run typecheck
+```
+
+## Estrutura do Projeto
+
+```
+src/
+├── components/          # Componentes React
+│   ├── pages/          # Páginas da aplicação
+│   ├── Dashboard.tsx   # Layout principal
+│   ├── Login.tsx       # Tela de login
+│   └── Sidebar.tsx     # Menu lateral
+├── contexts/           # Contextos React (Auth, Refresh)
+├── hooks/              # Hooks customizados
+├── lib/                # Bibliotecas e utilitários
+│   ├── database.ts     # Banco de dados SQLite local
+│   ├── db-helpers.ts   # Funções auxiliares do banco
+│   └── supabase-compat.ts  # Compatibilidade temporária
+├── types/              # Tipos TypeScript
+└── utils/              # Utilitários gerais
+```
+
+## Banco de Dados
+
+O sistema usa **SQLite local** que roda completamente no navegador:
+- Dados armazenados no `localStorage`
+- Não precisa de servidor de banco de dados
+- Tudo funciona offline
+
+### Limpar Banco de Dados
+
+Para resetar o banco e começar do zero:
+
+1. Abra o Console do navegador (F12)
+2. Execute:
+   ```javascript
+   localStorage.clear();
+   location.reload();
+   ```
+
+## Importante
+
+- Os dados são salvos apenas no navegador onde você usa o sistema
+- Cada navegador/dispositivo terá seus próprios dados
+- Para backup, você pode exportar os dados do localStorage
+- O sistema funciona completamente offline
+
+## Problemas Comuns
+
+### Erro ao instalar dependências
+```bash
+rm -rf node_modules package-lock.json
+npm install
+```
+
+### Porta 5173 já está em uso
+O Vite escolherá automaticamente a próxima porta disponível (5174, 5175, etc.)
+
+### Não consigo fazer login
+- Verifique se digitou o usuário e senha corretos
+- Tente limpar o localStorage e recarregar a página
+- Verifique o Console do navegador para mensagens de erro
+
+## Suporte
+
+Para mais informações, consulte:
+- `MIGRACAO_BANCO_LOCAL.md` - Detalhes técnicos da migração
+- `COMO_USAR.md` - Guia de uso do sistema
+- `CREDENCIAIS_LOGIN.md` - Informações de login
