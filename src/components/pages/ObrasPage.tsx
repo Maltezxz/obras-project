@@ -63,6 +63,11 @@ export default function ObrasPage() {
         return;
       }
 
+      // BUSCAR OBRAS - SEMPRE DO SERVIDOR (SEM CACHE)
+      console.log('🔍 Buscando obras DIRETO DO SUPABASE');
+      console.log('⏰ Timestamp da busca:', new Date().toISOString());
+      console.log('📊 Owner IDs para busca:', ownerIds);
+
       const { data, error } = await supabase
         .from('obras')
         .select('*')

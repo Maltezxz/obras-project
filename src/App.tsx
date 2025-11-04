@@ -3,13 +3,38 @@ import { RefreshProvider } from './contexts/RefreshContext';
 import { useAuth } from './hooks/useAuth';
 import Login from './components/Login';
 import Dashboard from './components/Dashboard';
+import { useEffect } from 'react';
 
-console.log('📦 App.tsx - Módulo carregado');
+// VERSÃO DO APP - Incrementar quando houver mudanças que precisam forçar atualização
+const APP_VERSION = '2.0.0';
+const VERSION_KEY = 'obrasflow_app_version';
+
+console.log('📦 App.tsx - Módulo carregado - Versão:', APP_VERSION);
 
 function AppContent() {
   console.log('🔄 AppContent - Componente renderizando...');
 
   const { user, loading } = useAuth();
+
+  // Verificar versão e limpar cache se necessário
+  useEffect(() => {
+    const savedVersion = localStorage.getItem(VERSION_KEY);
+
+    if (savedVersion !== APP_VERSION) {
+      console.log('🔄 Nova versão detectada!', { antiga: savedVersion, nova: APP_VERSION });
+      console.log('🧹 Limpando cache e forçando atualização...');
+
+      // Limpar TODOS os dados locais
+      localStorage.clear();
+      sessionStorage.clear();
+
+      // Salvar nova versão
+      localStorage.setItem(VERSION_KEY, APP_VERSION);
+
+      // Forçar reload completo (limpa cache do navegador)
+      window.location.reload();
+    }
+  }, []);
 
   console.log('👤 Estado do Auth:', { user: user?.email || 'null', loading });
 

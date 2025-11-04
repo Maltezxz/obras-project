@@ -95,8 +95,9 @@ export default function FerramentasPage() {
         return;
       }
 
-      // BUSCAR FERRAMENTAS COM TIMEOUT
-      console.log('🔍 Buscando ferramentas no Supabase com owner_ids:', ownerIds);
+      // BUSCAR FERRAMENTAS COM TIMEOUT - SEMPRE DO SERVIDOR (SEM CACHE)
+      console.log('🔍 Buscando ferramentas DIRETO DO SUPABASE com owner_ids:', ownerIds);
+      console.log('⏰ Timestamp da busca:', new Date().toISOString());
 
       const ferramentasPromise = supabase
         .from('ferramentas')
@@ -140,8 +141,9 @@ export default function FerramentasPage() {
         }
       }
 
-      // BUSCAR OBRAS
-      console.log('🔍 Buscando obras no Supabase');
+      // BUSCAR OBRAS - SEMPRE DO SERVIDOR (SEM CACHE)
+      console.log('🔍 Buscando obras DIRETO DO SUPABASE');
+      console.log('⏰ Timestamp da busca:', new Date().toISOString());
       const { data: obrasData, error: obrasError } = await supabase
         .from('obras')
         .select('*')

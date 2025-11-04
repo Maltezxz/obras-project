@@ -92,7 +92,9 @@ export default function HomePage() {
         return;
       }
 
-      // BUSCAR OBRAS
+      // BUSCAR OBRAS - SEMPRE DO SERVIDOR (SEM CACHE)
+      console.log('🔍 [HOME] Buscando obras DIRETO DO SUPABASE');
+      console.log('⏰ Timestamp da busca:', new Date().toISOString());
       const obrasRes = await supabase
         .from('obras')
         .select('*')
@@ -116,8 +118,10 @@ export default function HomePage() {
         }
       }
 
-      // BUSCAR FERRAMENTAS - SEM image_url e nf_image_url para evitar timeout com imagens grandes
-      console.log('🔍 Buscando ferramentas com owner_ids:', ownerIds);
+      // BUSCAR FERRAMENTAS - SEMPRE DO SERVIDOR (SEM CACHE)
+      console.log('🔍 [HOME] Buscando ferramentas DIRETO DO SUPABASE');
+      console.log('⏰ Timestamp da busca:', new Date().toISOString());
+      console.log('📊 Owner IDs:', ownerIds);
       const ferramRes = await supabase
         .from('ferramentas')
         .select('id, name, modelo, serial, status, current_type, current_id, cadastrado_por, owner_id, created_at')
