@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { AlertTriangle, Package, CheckCircle } from 'lucide-react';
-import { supabase } from '../../lib/supabase';
+import { supabase } from '../../lib/supabase-compat';
+import * as dbHelpers from '../../lib/db-helpers';
 import { useAuth } from '../../hooks/useAuth';
 import { Ferramenta, Obra, Estabelecimento } from '../../types';
 

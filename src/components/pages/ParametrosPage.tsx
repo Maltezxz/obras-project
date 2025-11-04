@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Settings, User, Mail, Building2, Shield, Users, ChevronRight, X, Save, Wrench } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
-import { supabase } from '../../lib/supabase';
+import { supabase } from '../../lib/supabase-compat';
+import * as dbHelpers from '../../lib/db-helpers';
 import { Obra } from '../../types';
 
 interface UserWithPermissions {

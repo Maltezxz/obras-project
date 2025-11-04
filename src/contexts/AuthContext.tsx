@@ -1,7 +1,7 @@
 import React, { createContext, useEffect, useState } from 'react';
-import { supabase } from '../lib/supabase';
 import { User, AuthContextType } from '../types';
 import { PROTECTED_HOST } from '../constants/auth';
+import { getDatabase, selectOne, selectAll, insertOne, deleteOne, saveDatabase } from '../lib/database';
 
 export const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
@@ -20,6 +20,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const checkSession = async () => {
     try {
+      await getDatabase();
       const storedUserId = sessionStorage.getItem('obrasflow_user_id');
       if (storedUserId) {
         await loadUser(storedUserId);
@@ -35,25 +36,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       console.log('Carregando usuário com ID:', userId);
 
-      const { data, error } = await supabase
-        .from('users')
-        .select('*')
-        .eq('id', userId)
-        .maybeSingle();
+      const userData = await selectOne('users', 'id = ?', [userId]);
 
-      if (error) {
-        console.error('Erro ao carregar usuário:', error);
-        throw error;
-      }
-
-      if (!data) {
+      if (!userData) {
         console.warn('Usuário não encontrado no banco de dados:', userId);
         setUser(null);
         sessionStorage.removeItem('obrasflow_user_id');
       } else {
-        console.log('Usuário carregado com sucesso:', data);
-        setUser(data);
-        sessionStorage.setItem('obrasflow_user_id', data.id);
+        console.log('Usuário carregado com sucesso:', userData);
+        setUser(userData);
+        sessionStorage.setItem('obrasflow_user_id', userData.id);
       }
     } catch (error) {
       console.error('Erro ao carregar usuário:', error);
@@ -66,18 +58,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       console.log('🔍 Tentando login com:', { cnpj, username });
 
-      // 1. Buscar usuário pelo CNPJ e nome
-      const { data: userData, error: userError } = await supabase
-        .from('users')
-        .select('*')
-        .eq('cnpj', cnpj.trim())
-        .ilike('name', username.trim())
-        .maybeSingle();
+      await getDatabase();
 
-      if (userError) {
-        console.error('Erro ao buscar usuário:', userError);
-        throw new Error('Erro ao buscar usuário no banco de dados');
-      }
+      const userData = await selectOne(
+        'users',
+        'cnpj = ? AND LOWER(name) = LOWER(?)',
+        [cnpj.trim(), username.trim()]
+      );
 
       if (!userData) {
         throw new Error('Usuário não encontrado. Verifique o CNPJ e nome de usuário.');
@@ -85,23 +72,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       console.log('✅ Usuário encontrado:', userData);
 
-      // 2. Verificar credenciais
-      const { data: credData, error: credError } = await supabase
-        .from('user_credentials')
-        .select('password_hash')
-        .eq('user_id', userData.id)
-        .maybeSingle();
-
-      if (credError) {
-        console.error('Erro ao buscar credenciais:', credError);
-        throw new Error('Erro ao verificar credenciais');
-      }
+      const credData = await selectOne('user_credentials', 'user_id = ?', [userData.id]);
 
       if (!credData) {
         throw new Error('Credenciais não encontradas para este usuário');
       }
 
-      // 3. Validar senha
       const passwordHash = simpleHash(password);
       if (passwordHash !== credData.password_hash) {
         throw new Error('Senha incorreta');
@@ -109,7 +85,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       console.log('✅ Login bem-sucedido!');
 
-      // 4. Definir usuário logado
       setUser(userData);
       sessionStorage.setItem('obrasflow_user_id', userData.id);
       setLoading(false);
@@ -139,43 +114,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     console.log('[addEmployee] Iniciando cadastro:', { name: employeeData.name, email: employeeData.email });
 
     try {
-      // 1. Criar funcionário ou host na tabela users
-      const { data: tableUser, error: tableError } = await supabase
-        .from('users')
-        .insert({
-          name: employeeData.name,
-          email: employeeData.email,
-          role: employeeData.role, // pode ser 'funcionario' ou 'host'
-          host_id: employeeData.role === 'host' ? null : user.id, // host não tem host_id
-          cnpj: hostCnpj,
-        })
-        .select()
-        .single();
+      const newUserId = await insertOne('users', {
+        name: employeeData.name,
+        email: employeeData.email,
+        role: employeeData.role,
+        host_id: employeeData.role === 'host' ? null : user.id,
+        cnpj: hostCnpj,
+      });
 
-      if (tableError) {
-        console.error('[addEmployee] Erro ao criar na tabela:', tableError);
-        throw new Error(`Erro ao criar funcionário: ${tableError.message}`);
-      }
+      console.log('[addEmployee] Usuário criado na tabela:', newUserId);
 
-      console.log('[addEmployee] Funcionário criado na tabela:', tableUser.id);
+      await insertOne('user_credentials', {
+        user_id: newUserId,
+        password_hash: simpleHash(password)
+      });
 
-      // 2. Criar credenciais
-      const { error: credError } = await supabase
-        .from('user_credentials')
-        .insert({
-          user_id: tableUser.id,
-          password_hash: simpleHash(password)
-        });
+      console.log('[addEmployee] Funcionário criado com sucesso:', newUserId);
 
-      if (credError) {
-        console.error('[addEmployee] Erro ao criar credenciais:', credError);
-        // Reverter criação do usuário
-        await supabase.from('users').delete().eq('id', tableUser.id);
-        throw new Error(`Erro ao criar credenciais: ${credError.message}`);
-      }
-
-      console.log('[addEmployee] Funcionário criado com sucesso:', tableUser.id);
-      return tableUser;
+      const newUser = await selectOne('users', 'id = ?', [newUserId]);
+      return newUser;
     } catch (error) {
       console.error('[addEmployee] Erro geral:', error);
       throw error;
@@ -187,23 +144,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       throw new Error('Apenas hosts podem remover funcionários');
     }
 
-    // Verificar se está tentando remover o Fernando Antunes (Host protegido)
     if (employeeId === PROTECTED_HOST.id) {
       throw new Error(`${PROTECTED_HOST.name} não pode ser removido. Este é o host principal do sistema.`);
     }
 
     try {
-      // As credenciais serão removidas automaticamente por CASCADE
-      const { error } = await supabase
-        .from('users')
-        .delete()
-        .eq('id', employeeId);
-
-      if (error) {
-        console.error('Erro ao remover funcionário:', error);
-        throw new Error(`Erro ao remover funcionário: ${error.message}`);
-      }
-
+      await deleteOne('users', employeeId);
       console.log('Funcionário removido com sucesso');
     } catch (error) {
       console.error('Erro ao remover funcionário:', error);
@@ -217,36 +163,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
 
     try {
-      // Buscar IDs de todos os Hosts com mesmo CNPJ
       const hostIds = await getCompanyHostIds();
 
-      // Buscar funcionários criados por QUALQUER host do mesmo CNPJ
-      const { data: funcionarios, error: funcError } = await supabase
-        .from('users')
-        .select('*')
-        .eq('role', 'funcionario')
-        .in('host_id', hostIds)
-        .order('name');
+      const funcionarios = await selectAll(
+        'users',
+        `role = 'funcionario' AND host_id IN (${hostIds.map(() => '?').join(',')})`,
+        hostIds
+      );
 
-      if (funcError) {
-        console.error('Erro ao buscar funcionários:', funcError);
-      }
+      const hosts = await selectAll(
+        'users',
+        `role = 'host' AND cnpj = ? AND id != ?`,
+        [user.cnpj, user.id]
+      );
 
-      // Buscar outros hosts do mesmo CNPJ (excluir o próprio usuário)
-      const { data: hosts, error: hostError } = await supabase
-        .from('users')
-        .select('*')
-        .eq('role', 'host')
-        .eq('cnpj', user.cnpj)
-        .neq('id', user.id)
-        .order('name');
-
-      if (hostError) {
-        console.error('Erro ao buscar hosts:', hostError);
-      }
-
-      // Combinar funcionários e hosts
-      return [...(funcionarios || []), ...(hosts || [])];
+      return [...funcionarios, ...hosts].sort((a, b) => a.name.localeCompare(b.name));
     } catch (error) {
       console.error('Erro ao buscar funcionários:', error);
       return [];
@@ -259,18 +190,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
 
     try {
-      const { data: hosts, error } = await supabase
-        .from('users')
-        .select('id')
-        .eq('role', 'host')
-        .eq('cnpj', user.cnpj);
-
-      if (error) {
-        console.error('Erro ao buscar IDs dos hosts:', error);
-        return [user.id];
-      }
-
-      return hosts?.map(h => h.id) || [user.id];
+      const hosts = await selectAll('users', 'role = ? AND cnpj = ?', ['host', user.cnpj]);
+      return hosts.map(h => h.id);
     } catch (error) {
       console.error('Erro ao buscar IDs dos hosts:', error);
       return [user.id];

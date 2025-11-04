@@ -1,4 +1,4 @@
-import { supabase } from '../lib/supabase';
+import { getUserObraPermissions, getUserFerramentaPermissions } from '../lib/db-helpers';
 import { Obra } from '../types';
 
 export interface UserPermission {
@@ -41,15 +41,7 @@ export async function getFilteredObras(
 
   try {
     console.log('🔍 Buscando permissões para usuário:', userId);
-    const { data: permissions, error } = await supabase
-      .from('user_obra_permissions')
-      .select('obra_id')
-      .eq('user_id', userId);
-
-    if (error) {
-      console.error('❌ Erro ao carregar permissões:', error);
-      return [];
-    }
+    const permissions = await getUserObraPermissions(userId);
 
     console.log('📋 Permissões encontradas:', permissions);
 
@@ -76,16 +68,8 @@ export async function getFilteredObras(
 
 export async function getUserPermissions(userId: string): Promise<Set<string>> {
   try {
-    const { data, error } = await supabase
-      .from('user_obra_permissions')
-      .select('obra_id')
-      .eq('user_id', userId);
-
-    if (error || !data) {
-      return new Set();
-    }
-
-    return new Set(data.map(p => p.obra_id));
+    const permissions = await getUserObraPermissions(userId);
+    return new Set(permissions.map(p => p.obra_id));
   } catch (error) {
     console.error('Erro ao obter permissões:', error);
     return new Set();
@@ -98,19 +82,8 @@ export async function hasObraPermission(userId: string, userRole: string, obraId
   }
 
   try {
-    const { data, error } = await supabase
-      .from('user_obra_permissions')
-      .select('id')
-      .eq('user_id', userId)
-      .eq('obra_id', obraId)
-      .maybeSingle();
-
-    if (error) {
-      console.error('Erro ao verificar permissão:', error);
-      return false;
-    }
-
-    return !!data;
+    const permissions = await getUserObraPermissions(userId);
+    return permissions.some(p => p.obra_id === obraId);
   } catch (error) {
     console.error('Erro ao verificar permissão:', error);
     return false;
@@ -130,15 +103,7 @@ export async function getFilteredFerramentas(
 
   try {
     console.log('🔍 Buscando permissões de ferramentas para usuário:', userId);
-    const { data: permissions, error } = await supabase
-      .from('user_ferramenta_permissions')
-      .select('ferramenta_id')
-      .eq('user_id', userId);
-
-    if (error) {
-      console.error('❌ Erro ao carregar permissões de ferramentas:', error);
-      return [];
-    }
+    const permissions = await getUserFerramentaPermissions(userId);
 
     console.log('📋 Permissões de ferramentas encontradas:', permissions);
 
@@ -165,16 +130,8 @@ export async function getFilteredFerramentas(
 
 export async function getFerramentaPermissions(userId: string): Promise<Set<string>> {
   try {
-    const { data, error } = await supabase
-      .from('user_ferramenta_permissions')
-      .select('ferramenta_id')
-      .eq('user_id', userId);
-
-    if (error || !data) {
-      return new Set();
-    }
-
-    return new Set(data.map(p => p.ferramenta_id));
+    const permissions = await getUserFerramentaPermissions(userId);
+    return new Set(permissions.map(p => p.ferramenta_id));
   } catch (error) {
     console.error('Erro ao obter permissões de ferramentas:', error);
     return new Set();
@@ -187,19 +144,8 @@ export async function hasFerramentaPermission(userId: string, userRole: string, 
   }
 
   try {
-    const { data, error } = await supabase
-      .from('user_ferramenta_permissions')
-      .select('id')
-      .eq('user_id', userId)
-      .eq('ferramenta_id', ferramentaId)
-      .maybeSingle();
-
-    if (error) {
-      console.error('Erro ao verificar permissão de ferramenta:', error);
-      return false;
-    }
-
-    return !!data;
+    const permissions = await getUserFerramentaPermissions(userId);
+    return permissions.some(p => p.ferramenta_id === ferramentaId);
   } catch (error) {
     console.error('Erro ao verificar permissão de ferramenta:', error);
     return false;

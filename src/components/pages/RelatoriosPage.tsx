@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { FileText, Download, Calendar, Wrench, User, MapPin } from 'lucide-react';
-import { supabase } from '../../lib/supabase';
+import { supabase } from '../../lib/supabase-compat';
+import * as dbHelpers from '../../lib/db-helpers';
 import { useAuth } from '../../hooks/useAuth';
 import { Movimentacao, Ferramenta, User as UserType, Obra, Estabelecimento } from '../../types';
 

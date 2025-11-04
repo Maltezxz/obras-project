@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { Building2, Wrench, AlertTriangle, TrendingUp, Clock, Plus, Edit, CheckCircle, Trash2, MoveRight, MapPin, PackageMinus } from 'lucide-react';
-import { supabase } from '../../lib/supabase';
+import { supabase } from '../../lib/supabase-compat';
+import * as dbHelpers from '../../lib/db-helpers';
 import { useAuth } from '../../hooks/useAuth';
 import { useRefresh } from '../../contexts/RefreshContext';
 import { Obra, Ferramenta } from '../../types';
@@ -76,42 +77,20 @@ export default function HomePage() {
         return;
       }
 
-      const obrasRes = await supabase
-        .from('obras')
-        .select('*')
-        .in('owner_id', ownerIds)
-        .eq('status', 'ativa')
-        .order('created_at', { ascending: false });
-
-      if (obrasRes.error) {
-        console.error('Erro ao carregar obras do Supabase:', obrasRes.error);
-        throw obrasRes.error;
-      }
-
-      const allObras = obrasRes.data || [];
+      const allObras = await dbHelpers.getActiveObrasByOwnerIds(ownerIds);
       const filteredObras = await getFilteredObras(user.id, user.role, user.host_id, allObras);
 
       setObras(filteredObras);
-      console.log('✅ Obras carregadas e filtradas do Supabase na Home:', {
+      console.log('✅ Obras carregadas e filtradas do banco local na Home:', {
         total: allObras.length,
         permitidas: filteredObras.length
       });
 
-      const ferramRes = await supabase
-        .from('ferramentas')
-        .select('*')
-        .in('owner_id', ownerIds);
-
-      if (ferramRes.error) {
-        console.error('Erro ao carregar ferramentas do Supabase:', ferramRes.error);
-        throw ferramRes.error;
-      }
-
-      const allFerramentas = ferramRes.data || [];
+      const allFerramentas = await dbHelpers.getFerramentasByOwnerIds(ownerIds);
       const filteredFerramentas = await getFilteredFerramentas(user.id, user.role, user.host_id || null, allFerramentas);
 
       setFerramentas(filteredFerramentas);
-      console.log('✅ Ferramentas carregadas e filtradas do Supabase na Home:', {
+      console.log('✅ Ferramentas carregadas e filtradas do banco local na Home:', {
         total: allFerramentas.length,
         permitidas: filteredFerramentas.length,
         disponiveis: filteredFerramentas.filter(f => f.status === 'disponivel').length,
@@ -119,19 +98,9 @@ export default function HomePage() {
         desaparecidas: filteredFerramentas.filter(f => f.status === 'desaparecida').length
       });
 
-      const historicoRes = await supabase
-        .from('historico')
-        .select('*')
-        .in('owner_id', ownerIds)
-        .order('created_at', { ascending: false })
-        .limit(5);
-
-      if (historicoRes.error) {
-        console.error('Erro ao carregar histórico:', historicoRes.error);
-      } else {
-        setAtividadesRecentes(historicoRes.data || []);
-        console.log('✅ Atividades recentes carregadas:', historicoRes.data?.length || 0);
-      }
+      const historicoData = await dbHelpers.getHistoricoByOwnerIds(ownerIds);
+      setAtividadesRecentes(historicoData.slice(0, 5));
+      console.log('✅ Atividades recentes carregadas:', historicoData.length);
     } catch (error) {
       console.error('Error loading data:', error);
     } finally {
@@ -141,27 +110,6 @@ export default function HomePage() {
 
   useEffect(() => {
     loadData();
-
-    // Configurar realtime para atividades recentes
-    const historicoChannel = supabase
-      .channel('historico-home-changes')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'historico',
-        },
-        (payload) => {
-          console.log('📡 Atualização em tempo real no histórico:', payload);
-          loadData();
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(historicoChannel);
-    };
   }, [loadData, refreshTrigger]);
 
   const stats = [
