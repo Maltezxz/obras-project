@@ -6,7 +6,7 @@ import Dashboard from './components/Dashboard';
 import { useEffect } from 'react';
 
 // VERSÃO DO APP - Incrementar quando houver mudanças que precisam forçar atualização
-const APP_VERSION = '2.1.0';
+const APP_VERSION = '3.0.0';
 const VERSION_KEY = 'obrasflow_app_version';
 
 console.log('📦 App.tsx - Módulo carregado - Versão:', APP_VERSION);
@@ -22,7 +22,7 @@ function AppContent() {
 
     if (savedVersion !== APP_VERSION) {
       console.log('🔄 Nova versão detectada!', { antiga: savedVersion, nova: APP_VERSION });
-      console.log('🧹 Limpando cache e forçando atualização...');
+      console.log('🧹 Limpando TUDO e forçando atualização...');
 
       // Limpar TODOS os dados locais
       localStorage.clear();
@@ -33,15 +33,27 @@ function AppContent() {
         document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/");
       });
 
+      // Tentar unregister service workers
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.getRegistrations().then(registrations => {
+          registrations.forEach(registration => registration.unregister());
+        });
+      }
+
+      // Limpar cache do navegador
+      if ('caches' in window) {
+        caches.keys().then(names => {
+          names.forEach(name => caches.delete(name));
+        });
+      }
+
       // Salvar nova versão
       localStorage.setItem(VERSION_KEY, APP_VERSION);
 
-      console.log('✅ Cache limpo! Recarregando em 1 segundo...');
+      console.log('✅ TUDO limpo! Forçando hard reload...');
 
-      // Forçar reload completo após 1 segundo
-      setTimeout(() => {
-        window.location.reload();
-      }, 1000);
+      // Forçar HARD reload (ignora cache)
+      window.location.href = window.location.href.split('?')[0] + '?v=' + APP_VERSION + '&t=' + Date.now();
     } else {
       console.log('✅ App está na versão mais recente:', APP_VERSION);
     }
