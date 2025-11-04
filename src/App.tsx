@@ -6,7 +6,7 @@ import Dashboard from './components/Dashboard';
 import { useEffect } from 'react';
 
 // VERSÃO DO APP - Incrementar quando houver mudanças que precisam forçar atualização
-const APP_VERSION = '2.0.0';
+const APP_VERSION = '2.1.0';
 const VERSION_KEY = 'obrasflow_app_version';
 
 console.log('📦 App.tsx - Módulo carregado - Versão:', APP_VERSION);
@@ -28,11 +28,22 @@ function AppContent() {
       localStorage.clear();
       sessionStorage.clear();
 
+      // Limpar todos os cookies
+      document.cookie.split(";").forEach((c) => {
+        document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/");
+      });
+
       // Salvar nova versão
       localStorage.setItem(VERSION_KEY, APP_VERSION);
 
-      // Forçar reload completo (limpa cache do navegador)
-      window.location.reload();
+      console.log('✅ Cache limpo! Recarregando em 1 segundo...');
+
+      // Forçar reload completo após 1 segundo
+      setTimeout(() => {
+        window.location.reload();
+      }, 1000);
+    } else {
+      console.log('✅ App está na versão mais recente:', APP_VERSION);
     }
   }, []);
 
