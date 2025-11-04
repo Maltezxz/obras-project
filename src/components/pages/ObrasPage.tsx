@@ -33,27 +33,13 @@ export default function ObrasPage() {
         return;
       }
 
-      console.log('🔄 Carregando obras para:', user.name, user.role);
-
       let ownerIds: string[] = [];
 
-      // Para HOSTS: buscar TODOS os hosts do mesmo CNPJ (todos veem a mesma coisa)
       if (user.role === 'host') {
-        const { data: hosts, error: hostsError } = await supabase
-          .from('users')
-          .select('id')
-          .eq('role', 'host')
-          .eq('cnpj', user.cnpj);
-
-        if (hostsError) {
-          console.error('Erro ao buscar hosts:', hostsError);
-          ownerIds = [user.id];
-        } else {
-          ownerIds = hosts?.map(h => h.id) || [user.id];
-        }
-        console.log('📊 Host Owner IDs:', ownerIds);
+        // Host: buscar IDs de todos os hosts com mesmo CNPJ
+        ownerIds = await getCompanyHostIds?.() || [user.id];
       } else {
-        // Para FUNCIONÁRIOS: usar apenas o host_id dele
+        // Funcionário: buscar apenas do host dele
         ownerIds = user.host_id ? [user.host_id] : [];
       }
 
@@ -62,11 +48,6 @@ export default function ObrasPage() {
         setLoading(false);
         return;
       }
-
-      // BUSCAR OBRAS - SEMPRE DO SERVIDOR (SEM CACHE)
-      console.log('🔍 Buscando obras DIRETO DO SUPABASE');
-      console.log('⏰ Timestamp da busca:', new Date().toISOString());
-      console.log('📊 Owner IDs para busca:', ownerIds);
 
       const { data, error } = await supabase
         .from('obras')
@@ -80,16 +61,10 @@ export default function ObrasPage() {
       }
 
       const allObras = data || [];
+      const filteredObras = await getFilteredObras(user.id, user.role, user.host_id || null, allObras);
 
-      // HOSTS: mostram TUDO | FUNCIONÁRIOS: filtrar por permissões
-      if (user.role === 'host') {
-        setObras(allObras);
-        console.log('✅ HOST vê todas as obras:', allObras.length);
-      } else {
-        const filteredObras = await getFilteredObras(user.id, user.role, user.host_id || null, allObras);
-        setObras(filteredObras);
-        console.log('✅ FUNCIONÁRIO vê obras filtradas:', filteredObras.length, 'de', allObras.length);
-      }
+      setObras(filteredObras);
+      console.log('✅ Obras carregadas e filtradas do Supabase');
     } catch (error) {
       console.error('Error loading obras:', error);
       setObras([]);

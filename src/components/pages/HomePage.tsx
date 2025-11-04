@@ -61,27 +61,11 @@ export default function HomePage() {
         return;
       }
 
-      console.log('🔄 Carregando dados da Home para:', user.name, user.role);
-
       let ownerIds: string[] = [];
 
-      // Para HOSTS: buscar TODOS os hosts do mesmo CNPJ (todos veem a mesma coisa)
       if (user.role === 'host') {
-        const { data: hosts, error: hostsError } = await supabase
-          .from('users')
-          .select('id')
-          .eq('role', 'host')
-          .eq('cnpj', user.cnpj);
-
-        if (hostsError) {
-          console.error('Erro ao buscar hosts:', hostsError);
-          ownerIds = [user.id];
-        } else {
-          ownerIds = hosts?.map(h => h.id) || [user.id];
-        }
-        console.log('📊 Host Owner IDs:', ownerIds);
+        ownerIds = await getCompanyHostIds?.() || [user.id];
       } else {
-        // Para FUNCIONÁRIOS: usar apenas o host_id dele
         ownerIds = user.host_id ? [user.host_id] : [];
       }
 
@@ -92,9 +76,6 @@ export default function HomePage() {
         return;
       }
 
-      // BUSCAR OBRAS - SEMPRE DO SERVIDOR (SEM CACHE)
-      console.log('🔍 [HOME] Buscando obras DIRETO DO SUPABASE');
-      console.log('⏰ Timestamp da busca:', new Date().toISOString());
       const obrasRes = await supabase
         .from('obras')
         .select('*')
@@ -103,54 +84,41 @@ export default function HomePage() {
         .order('created_at', { ascending: false });
 
       if (obrasRes.error) {
-        console.error('Erro ao carregar obras:', obrasRes.error);
-      } else {
-        const allObras = obrasRes.data || [];
-
-        // HOSTS: mostram TUDO | FUNCIONÁRIOS: filtrar por permissões
-        if (user.role === 'host') {
-          setObras(allObras);
-          console.log('✅ HOST vê todas as obras:', allObras.length);
-        } else {
-          const filteredObras = await getFilteredObras(user.id, user.role, user.host_id, allObras);
-          setObras(filteredObras);
-          console.log('✅ FUNCIONÁRIO vê obras filtradas:', filteredObras.length, 'de', allObras.length);
-        }
+        console.error('Erro ao carregar obras do Supabase:', obrasRes.error);
+        throw obrasRes.error;
       }
 
-      // BUSCAR FERRAMENTAS - SEMPRE DO SERVIDOR (SEM CACHE)
-      console.log('🔍 [HOME] Buscando ferramentas DIRETO DO SUPABASE');
-      console.log('⏰ Timestamp da busca:', new Date().toISOString());
-      console.log('📊 Owner IDs:', ownerIds);
+      const allObras = obrasRes.data || [];
+      const filteredObras = await getFilteredObras(user.id, user.role, user.host_id, allObras);
+
+      setObras(filteredObras);
+      console.log('✅ Obras carregadas e filtradas do Supabase na Home:', {
+        total: allObras.length,
+        permitidas: filteredObras.length
+      });
+
       const ferramRes = await supabase
         .from('ferramentas')
-        .select('id, name, modelo, serial, status, current_type, current_id, cadastrado_por, owner_id, created_at')
+        .select('*')
         .in('owner_id', ownerIds);
 
       if (ferramRes.error) {
-        console.error('❌ Erro ao carregar ferramentas:', ferramRes.error);
-      } else {
-        const allFerramentas = ferramRes.data || [];
-        console.log('📦 Ferramentas retornadas do banco:', allFerramentas.length, allFerramentas);
-
-        // HOSTS: mostram TUDO | FUNCIONÁRIOS: filtrar por permissões
-        if (user.role === 'host') {
-          setFerramentas(allFerramentas);
-          console.log('✅ HOST vê todas as ferramentas:', allFerramentas.length);
-          console.log('📊 Por status:', {
-            disponiveis: allFerramentas.filter(f => f.status === 'disponivel').length,
-            em_uso: allFerramentas.filter(f => f.status === 'em_uso').length,
-            desaparecidas: allFerramentas.filter(f => f.status === 'desaparecida').length,
-            total_nao_desaparecidas: allFerramentas.filter(f => f.status !== 'desaparecida').length
-          });
-        } else {
-          const filteredFerramentas = await getFilteredFerramentas(user.id, user.role, user.host_id || null, allFerramentas);
-          setFerramentas(filteredFerramentas);
-          console.log('✅ FUNCIONÁRIO vê ferramentas filtradas:', filteredFerramentas.length, 'de', allFerramentas.length);
-        }
+        console.error('Erro ao carregar ferramentas do Supabase:', ferramRes.error);
+        throw ferramRes.error;
       }
 
-      // BUSCAR HISTÓRICO
+      const allFerramentas = ferramRes.data || [];
+      const filteredFerramentas = await getFilteredFerramentas(user.id, user.role, user.host_id || null, allFerramentas);
+
+      setFerramentas(filteredFerramentas);
+      console.log('✅ Ferramentas carregadas e filtradas do Supabase na Home:', {
+        total: allFerramentas.length,
+        permitidas: filteredFerramentas.length,
+        disponiveis: filteredFerramentas.filter(f => f.status === 'disponivel').length,
+        em_uso: filteredFerramentas.filter(f => f.status === 'em_uso').length,
+        desaparecidas: filteredFerramentas.filter(f => f.status === 'desaparecida').length
+      });
+
       const historicoRes = await supabase
         .from('historico')
         .select('*')
@@ -196,18 +164,6 @@ export default function HomePage() {
     };
   }, [loadData, refreshTrigger]);
 
-  const totalEquipamentos = ferramentas.filter(f => f.status !== 'desaparecida').length;
-  const totalDesaparecidos = ferramentas.filter(f => f.status === 'desaparecida').length;
-
-  console.log('📊 RENDER HomePage - Stats:', {
-    obras: obras.length,
-    ferramentas_total: ferramentas.length,
-    equipamentos: totalEquipamentos,
-    desaparecidos: totalDesaparecidos,
-    user: user?.name,
-    role: user?.role
-  });
-
   const stats = [
     {
       label: 'Obras Ativas',
@@ -219,7 +175,7 @@ export default function HomePage() {
     },
     {
       label: 'Equipamentos',
-      value: totalEquipamentos,
+      value: ferramentas.filter(f => f.status !== 'desaparecida').length,
       icon: Wrench,
       color: 'from-green-500 to-green-600',
       bgColor: 'bg-green-500/10',
@@ -227,7 +183,7 @@ export default function HomePage() {
     },
     {
       label: 'Desaparecidos',
-      value: totalDesaparecidos,
+      value: ferramentas.filter(f => f.status === 'desaparecida').length,
       icon: AlertTriangle,
       color: 'from-red-500 to-red-600',
       bgColor: 'bg-red-500/10',

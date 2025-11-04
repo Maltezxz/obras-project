@@ -3,33 +3,12 @@ import { useAuth } from '../hooks/useAuth';
 import logoImage from '../assets/pratica-logo.png';
 
 export default function Login() {
-  console.log('🔓 Login - Componente renderizando!');
-
   const [cnpj, setCnpj] = useState(import.meta.env.VITE_DEFAULT_CNPJ || '');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const { signIn } = useAuth();
-
-  console.log('🔓 Login - Estado:', { cnpj, hasUsername: !!username, hasPassword: !!password });
-
-  const handleClearCache = () => {
-    console.log('🧹 LIMPANDO CACHE MANUALMENTE...');
-
-    // Limpar TUDO
-    localStorage.clear();
-    sessionStorage.clear();
-
-    // Limpar cookies
-    document.cookie.split(";").forEach((c) => {
-      document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/");
-    });
-
-    console.log('✅ Cache limpo! Recarregando...');
-    alert('Cache limpo! A página vai recarregar.');
-    window.location.reload();
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -45,8 +24,6 @@ export default function Login() {
       setLoading(false);
     }
   };
-
-  console.log('🎨 Login - Renderizando JSX (tela de login)');
 
   return (
     <div className="min-h-screen relative overflow-hidden bg-gradient-to-br from-black via-gray-900 to-gray-800">
@@ -147,30 +124,11 @@ export default function Login() {
                     {loading ? 'Entrando...' : 'Entrar'}
                   </span>
                 </button>
-
-                <button
-                  type="button"
-                  onClick={handleClearCache}
-                  className="w-full relative group overflow-hidden rounded-xl bg-gradient-to-r from-orange-600 to-orange-500 px-6 py-3 text-white font-medium shadow-lg hover:shadow-orange-500/50 transition-all duration-300 hover:scale-[1.02] active:scale-[0.98]"
-                >
-                  <div className="absolute inset-0 bg-gradient-to-r from-orange-500 to-orange-600 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                  <span className="relative flex items-center justify-center gap-2">
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                    </svg>
-                    Atualizar App
-                  </span>
-                </button>
               </form>
             </div>
           </div>
 
-          <div className="text-center space-y-2">
-            <div className="bg-orange-500/10 border border-orange-500/30 rounded-xl p-3">
-              <p className="text-xs text-orange-300 font-medium">
-                Dados não aparecem? Clique em "Atualizar App"
-              </p>
-            </div>
+          <div className="text-center">
             <p className="text-xs text-gray-500">
               Prática Engenharia © 2025
             </p>

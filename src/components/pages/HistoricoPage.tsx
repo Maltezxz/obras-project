@@ -156,7 +156,7 @@ export default function HistoricoPage() {
     } finally {
       setLoading(false);
     }
-  }, [user, getCompanyHostIds]);
+  }, [user]);
 
   useEffect(() => {
     loadData();

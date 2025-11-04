@@ -9,121 +9,31 @@ function simpleHash(password: string): string {
   return btoa(password);
 }
 
-// COOKIES seguros para sincronização entre dispositivos
-const AUTH_COOKIE_NAME = 'obrasflow_auth';
-const COOKIE_EXPIRES_DAYS = 30;
-
-function setCookie(name: string, value: string, days: number) {
-  const date = new Date();
-  date.setTime(date.getTime() + (days * 24 * 60 * 60 * 1000));
-  const expires = `expires=${date.toUTCString()}`;
-  document.cookie = `${name}=${value};${expires};path=/;SameSite=Strict`;
-  console.log('🍪 Cookie salvo:', name);
-}
-
-function getCookie(name: string): string | null {
-  const nameEQ = name + "=";
-  const ca = document.cookie.split(';');
-  for (let i = 0; i < ca.length; i++) {
-    let c = ca[i];
-    while (c.charAt(0) === ' ') c = c.substring(1, c.length);
-    if (c.indexOf(nameEQ) === 0) {
-      const value = c.substring(nameEQ.length, c.length);
-      console.log('🍪 Cookie encontrado:', name);
-      return value;
-    }
-  }
-  console.log('🍪 Cookie não encontrado:', name);
-  return null;
-}
-
-function deleteCookie(name: string) {
-  document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 UTC;path=/;`;
-  console.log('🍪 Cookie deletado:', name);
-}
-
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  console.log('🔐 AuthProvider - Inicializando...');
-
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<unknown>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    console.log('🔐 AuthProvider - Verificando sessão salva...');
-    checkSavedSession();
+    checkSession();
+  }, []);
 
-    // Revalidar sessão a cada 5 minutos para garantir sincronização
-    const intervalId = setInterval(() => {
-      const savedUserId = getCookie(AUTH_COOKIE_NAME);
-      if (savedUserId && user) {
-        console.log('🔄 Revalidando sessão automaticamente...');
-        loadUser(savedUserId);
-      }
-    }, 5 * 60 * 1000); // 5 minutos
-
-    return () => clearInterval(intervalId);
-  }, [user]);
-
-  // Sincronização em tempo real: escutar mudanças no usuário logado
-  useEffect(() => {
-    if (!user?.id) return;
-
-    console.log('📡 Ativando sincronização em tempo real para user:', user.id);
-
-    const channel = supabase
-      .channel(`user-changes-${user.id}`)
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'users',
-          filter: `id=eq.${user.id}`
-        },
-        (payload) => {
-          console.log('🔔 Mudança detectada no usuário:', payload);
-          if (payload.eventType === 'UPDATE' && payload.new) {
-            console.log('✅ Atualizando dados do usuário em tempo real');
-            setUser(payload.new as User);
-          } else if (payload.eventType === 'DELETE') {
-            console.log('⚠️ Usuário foi deletado, fazendo logout');
-            signOut();
-          }
-        }
-      )
-      .subscribe();
-
-    return () => {
-      console.log('📡 Desativando sincronização em tempo real');
-      supabase.removeChannel(channel);
-    };
-  }, [user?.id]);
-
-  const checkSavedSession = async () => {
+  const checkSession = async () => {
     try {
-      const savedUserId = getCookie(AUTH_COOKIE_NAME);
-
-      if (savedUserId) {
-        console.log('🔐 Sessão encontrada, carregando usuário:', savedUserId);
-        await loadUser(savedUserId);
-      } else {
-        console.log('🔐 Nenhuma sessão salva encontrada');
+      const storedUserId = sessionStorage.getItem('obrasflow_user_id');
+      if (storedUserId) {
+        await loadUser(storedUserId);
       }
     } catch (error) {
-      console.error('❌ Erro ao verificar sessão:', error);
+      console.error('Erro ao verificar sessão:', error);
     } finally {
       setLoading(false);
     }
   };
 
-  const checkSession = async () => {
-    console.log('⚠️ checkSession chamado mas ignorado (simplificado)');
-  };
-
   const loadUser = async (userId: string) => {
     try {
-      console.log('🔄 Carregando usuário do Supabase, ID:', userId);
+      console.log('Carregando usuário com ID:', userId);
 
       const { data, error } = await supabase
         .from('users')
@@ -132,23 +42,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         .maybeSingle();
 
       if (error) {
-        console.error('❌ Erro ao carregar usuário:', error);
+        console.error('Erro ao carregar usuário:', error);
         throw error;
       }
 
       if (!data) {
-        console.warn('⚠️ Usuário não encontrado no banco de dados:', userId);
+        console.warn('Usuário não encontrado no banco de dados:', userId);
         setUser(null);
-        deleteCookie(AUTH_COOKIE_NAME);
+        sessionStorage.removeItem('obrasflow_user_id');
       } else {
-        console.log('✅ Usuário carregado com sucesso do Supabase:', data.name, data.role);
+        console.log('Usuário carregado com sucesso:', data);
         setUser(data);
-        setCookie(AUTH_COOKIE_NAME, data.id, COOKIE_EXPIRES_DAYS);
+        sessionStorage.setItem('obrasflow_user_id', data.id);
       }
     } catch (error) {
-      console.error('❌ Erro ao carregar usuário:', error);
+      console.error('Erro ao carregar usuário:', error);
       setUser(null);
-      deleteCookie(AUTH_COOKIE_NAME);
+      sessionStorage.removeItem('obrasflow_user_id');
     }
   };
 
@@ -197,31 +107,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         throw new Error('Senha incorreta');
       }
 
-      console.log('✅ Login bem-sucedido! Salvando sessão...');
+      console.log('✅ Login bem-sucedido!');
 
-      // LIMPAR TODOS os storages antigos para evitar dados desatualizados
-      console.log('🧹 Limpando localStorage e sessionStorage...');
-      localStorage.clear();
-      sessionStorage.clear();
-
-      // 4. Definir usuário logado e salvar em cookie
+      // 4. Definir usuário logado
       setUser(userData);
-      setCookie(AUTH_COOKIE_NAME, userData.id, COOKIE_EXPIRES_DAYS);
+      sessionStorage.setItem('obrasflow_user_id', userData.id);
       setLoading(false);
 
     } catch (error: unknown) {
-      console.error('❌ Erro no signIn:', error);
+      console.error('Erro no signIn:', error);
       const errorMessage = error instanceof Error ? error.message : 'Erro ao fazer login';
       throw new Error(errorMessage);
     }
   };
 
   const signOut = async () => {
-    console.log('🚪 Fazendo logout...');
     setUser(null);
     setSession(null);
-    deleteCookie(AUTH_COOKIE_NAME);
-    console.log('✅ Logout realizado, cookie removido');
+    sessionStorage.removeItem('obrasflow_user_id');
   };
 
   const addEmployee = async (

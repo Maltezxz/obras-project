@@ -48,7 +48,7 @@ export default function DesaparecidosPage() {
     } finally {
       setLoading(false);
     }
-  }, [user, getCompanyHostIds]);
+  }, [user]);
 
   useEffect(() => {
     loadData();

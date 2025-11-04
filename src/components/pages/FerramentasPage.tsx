@@ -7,7 +7,6 @@ import { useRefresh } from '../../contexts/RefreshContext';
 import { Ferramenta, Obra } from '../../types';
 import { fileToBase64 } from '../../utils/fileUtils';
 import { getFilteredObras, getFilteredFerramentas } from '../../utils/permissions';
-import { FerramentaImage } from '../FerramentaImage';
 
 export default function FerramentasPage() {
   const { user, getCompanyHostIds } = useAuth();
@@ -51,134 +50,65 @@ export default function FerramentasPage() {
     note: '',
   });
 
-  const loadData = useCallback(async (retryCount = 0) => {
-    const MAX_RETRIES = 3;
+  const loadData = useCallback(async () => {
     try {
       if (!user?.id) {
-        console.log('⚠️ Usuário não identificado, limpando dados');
         setFerramentas([]);
         setObras([]);
         setLoading(false);
         return;
       }
-
-      console.log(`🔄 [TENTATIVA ${retryCount + 1}] Carregando ferramentas para:`, user.name, user.role, user.id);
 
       let ownerIds: string[] = [];
 
-      // Para HOSTS: buscar TODOS os hosts do mesmo CNPJ (todos veem a mesma coisa)
       if (user.role === 'host') {
-        const { data: hosts, error: hostsError } = await supabase
-          .from('users')
-          .select('id')
-          .eq('role', 'host')
-          .eq('cnpj', user.cnpj);
-
-        if (hostsError) {
-          console.error('❌ Erro ao buscar hosts:', hostsError);
-          ownerIds = [user.id];
-        } else {
-          ownerIds = hosts?.map(h => h.id) || [user.id];
-        }
-        console.log('📊 HOST Owner IDs:', ownerIds);
+        ownerIds = await getCompanyHostIds?.() || [user.id];
       } else {
-        // Para FUNCIONÁRIOS: usar apenas o host_id dele
         ownerIds = user.host_id ? [user.host_id] : [];
-        console.log('📊 FUNCIONÁRIO Owner IDs:', ownerIds);
       }
 
       if (ownerIds.length === 0) {
-        console.warn('⚠️ Nenhum owner_id encontrado, limpando dados');
         setFerramentas([]);
         setObras([]);
         setLoading(false);
         return;
       }
 
-      // BUSCAR FERRAMENTAS COM TIMEOUT - SEMPRE DO SERVIDOR (SEM CACHE)
-      console.log('🔍 Buscando ferramentas DIRETO DO SUPABASE com owner_ids:', ownerIds);
-      console.log('⏰ Timestamp da busca:', new Date().toISOString());
-
-      const ferramentasPromise = supabase
+      const ferramRes = await supabase
         .from('ferramentas')
-        .select('id, name, modelo, serial, status, current_type, current_id, cadastrado_por, owner_id, descricao, nf, nf_image_url, data, valor, tempo_garantia_dias, garantia, marca, numero_lacre, numero_placa, adesivo, usuario, obra, created_at, updated_at, tipo')
+        .select('*')
         .in('owner_id', ownerIds)
         .order('created_at', { ascending: false });
 
-      const timeoutPromise = new Promise((_, reject) =>
-        setTimeout(() => reject(new Error('Timeout ao buscar ferramentas')), 10000)
-      );
-
-      const { data: ferramentasData, error: ferramError } = await Promise.race([
-        ferramentasPromise,
-        timeoutPromise
-      ]) as any;
-
-      if (ferramError) {
-        console.error('❌ Erro ao carregar ferramentas:', ferramError);
-
-        // RETRY automático se não for a última tentativa
-        if (retryCount < MAX_RETRIES) {
-          console.log(`🔄 Tentando novamente em 2 segundos... (${retryCount + 1}/${MAX_RETRIES})`);
-          setTimeout(() => loadData(retryCount + 1), 2000);
-          return;
-        }
-
-        console.error('❌ Falha após todas as tentativas');
-        alert('Erro ao carregar equipamentos. Verifique sua conexão e tente novamente.');
-      } else {
-        const allFerramentas = ferramentasData || [];
-        console.log('📦 Ferramentas retornadas do banco:', allFerramentas.length);
-
-        // HOSTS: mostram TUDO | FUNCIONÁRIOS: filtrar por permissões
-        if (user.role === 'host') {
-          setFerramentas(allFerramentas);
-          console.log('✅ HOST vê todas as ferramentas:', allFerramentas.length);
-        } else {
-          const filteredFerramentas = await getFilteredFerramentas(user.id, user.role, user.host_id || null, allFerramentas);
-          setFerramentas(filteredFerramentas);
-          console.log('✅ FUNCIONÁRIO vê ferramentas filtradas:', filteredFerramentas.length, 'de', allFerramentas.length);
-        }
+      if (ferramRes.error) {
+        console.error('Erro ao carregar ferramentas do Supabase:', ferramRes.error);
+        throw ferramRes.error;
       }
 
-      // BUSCAR OBRAS - SEMPRE DO SERVIDOR (SEM CACHE)
-      console.log('🔍 Buscando obras DIRETO DO SUPABASE');
-      console.log('⏰ Timestamp da busca:', new Date().toISOString());
-      const { data: obrasData, error: obrasError } = await supabase
+      const allFerramentas = ferramRes.data || [];
+      const filteredFerramentas = await getFilteredFerramentas(user.id, user.role, user.host_id || null, allFerramentas);
+
+      setFerramentas(filteredFerramentas);
+      console.log('✅ Ferramentas carregadas e filtradas do Supabase:', filteredFerramentas.length, 'ferramentas');
+
+      const obrasRes = await supabase
         .from('obras')
         .select('*')
         .in('owner_id', ownerIds)
-        .eq('status', 'ativa')
-        .order('created_at', { ascending: false });
+        .eq('status', 'ativa');
 
-      if (obrasError) {
-        console.error('❌ Erro ao carregar obras:', obrasError);
-      } else {
-        const allObras = obrasData || [];
-        console.log('🏗️ Obras retornadas do banco:', allObras.length);
-
-        // HOSTS: mostram TUDO | FUNCIONÁRIOS: filtrar por permissões
-        if (user.role === 'host') {
-          setObras(allObras);
-          console.log('✅ HOST vê todas as obras:', allObras.length);
-        } else {
-          const filteredObras = await getFilteredObras(user.id, user.role, user.host_id, allObras);
-          setObras(filteredObras);
-          console.log('✅ FUNCIONÁRIO vê obras filtradas:', filteredObras.length, 'de', allObras.length);
-        }
+      if (obrasRes.error) {
+        console.error('Erro ao carregar obras do Supabase:', obrasRes.error);
+        throw obrasRes.error;
       }
 
+      const allObras = obrasRes.data || [];
+      const filteredObras = await getFilteredObras(user.id, user.role, user.host_id, allObras);
+
+      setObras(filteredObras);
+      console.log('✅ Obras carregadas e filtradas do Supabase:', filteredObras.length, 'obras');
     } catch (error) {
-      console.error('❌ Erro geral ao carregar dados:', error);
-
-      // RETRY automático se não for a última tentativa
-      if (retryCount < MAX_RETRIES) {
-        console.log(`🔄 Tentando novamente em 2 segundos... (${retryCount + 1}/${MAX_RETRIES})`);
-        setTimeout(() => loadData(retryCount + 1), 2000);
-        return;
-      }
-
-      alert('Erro ao conectar com o servidor. Verifique sua internet e recarregue a página.');
+      console.error('Error loading data:', error);
     } finally {
       setLoading(false);
     }
@@ -495,30 +425,6 @@ export default function FerramentasPage() {
           </p>
         </div>
         <div className="flex items-center space-x-3">
-          <button
-            onClick={() => {
-              setLoading(true);
-              loadData(0);
-            }}
-            disabled={loading}
-            className="flex items-center space-x-2 px-4 py-3 bg-white/5 border border-white/10 text-white rounded-xl hover:bg-white/10 transition-all duration-300 disabled:opacity-50"
-            title="Recarregar equipamentos"
-          >
-            <svg
-              className={`w-5 h-5 ${loading ? 'animate-spin' : ''}`}
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-              />
-            </svg>
-            <span>Recarregar</span>
-          </button>
           {canCreateFerramentas && (
             <button
               onClick={() => setShowModal(true)}
@@ -547,13 +453,15 @@ export default function FerramentasPage() {
           >
             <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent"></div>
             <div className="relative p-6">
-              <div className="mb-4 rounded-xl overflow-hidden border border-white/10">
-                <FerramentaImage
-                  ferramentaId={ferramenta.id}
-                  alt={ferramenta.name}
-                  className="w-full h-48 object-cover"
-                />
-              </div>
+              {ferramenta.image_url && (
+                <div className="mb-4 rounded-xl overflow-hidden border border-white/10">
+                  <img
+                    src={ferramenta.image_url}
+                    alt={ferramenta.name}
+                    className="w-full h-48 object-cover"
+                  />
+                </div>
+              )}
               <div className="flex items-start justify-between mb-4">
                 <div className={`p-3 rounded-xl ${
                   ferramenta.status === 'desaparecida'
@@ -691,29 +599,14 @@ export default function FerramentasPage() {
         ))}
       </div>
 
-      {ferramentas.length === 0 && !loading && (
+      {ferramentas.length === 0 && (
         <div className="text-center py-20">
           <Wrench className="w-16 h-16 text-gray-600 mx-auto mb-4" />
           <h3 className="text-xl font-semibold text-gray-400 mb-2">
             Nenhum equipamento cadastrado
           </h3>
           <p className="text-gray-500 mb-6">
-            {canCreateFerramentas
-              ? 'Comece adicionando seu primeiro equipamento'
-              : 'Aguarde o administrador cadastrar equipamentos'}
-          </p>
-          <button
-            onClick={() => {
-              console.log('🔄 Usuário clicou em recarregar manualmente');
-              setLoading(true);
-              loadData(0);
-            }}
-            className="px-6 py-3 bg-white/5 border border-white/10 text-white rounded-xl hover:bg-white/10 transition-all duration-300"
-          >
-            Recarregar Página
-          </button>
-          <p className="text-gray-600 text-sm mt-4">
-            Se os equipamentos não aparecerem, abra o Console (F12) e envie os logs para suporte
+            Comece adicionando seu primeiro equipamento
           </p>
         </div>
       )}
@@ -1193,13 +1086,6 @@ export default function FerramentasPage() {
                 </button>
               </div>
               <div className="p-6 space-y-4">
-                <div className="mb-4 rounded-xl overflow-hidden border border-white/10">
-                  <FerramentaImage
-                    ferramentaId={selectedFerramenta.id}
-                    alt={selectedFerramenta.name}
-                    className="w-full h-64 object-cover"
-                  />
-                </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <p className="text-xs text-gray-400 mb-1">Item</p>
